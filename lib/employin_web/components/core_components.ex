@@ -17,7 +17,7 @@ defmodule EmployinWeb.CoreComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  use Gettext, backend: Employin.Gettext
+  use Gettext, backend: EmployinWeb.Gettext
 
   @doc """
   Renders a modal.
