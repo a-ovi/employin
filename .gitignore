@@ -35,3 +35,5 @@ employin-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# Ignore .envrc file
+.envrc
