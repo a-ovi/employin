@@ -45,6 +45,6 @@ defmodule EmployinWeb.HomeLive do
   end
 
   defp format_time(date_time) do
-    Calendar.strftime(date_time, "%H:%M")
+    Calendar.strftime(date_time, "%I:%M %p UTC")
   end
 end
