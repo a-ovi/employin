@@ -1,0 +1,16 @@
+<div>
+  <p class="text-xl mb-2">Complete your profile!</p>
+  <.form
+    id="registration-from"
+    for={@form}
+    phx-submit="submit"
+    phx-change="validate"
+    action={~p"/login?&token=#{@token}"}
+    phx-trigger-action={@trigger_submit}
+    method="post"
+  >
+    <label class="text-sm font-medium text-zinc-700">Display Name</label>
+    <.input type="text" field={@form[:display_name]} phx-debounce="500" />
+    <button type="submit" phx-disable-with="checking...">submit</button>
+  </.form>
+</div>

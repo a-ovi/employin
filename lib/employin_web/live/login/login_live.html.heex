@@ -1,0 +1,26 @@
+<div>
+  <%= if @step == :enter_email do %>
+    <div>
+      <.form id="email-form" for={@form} phx-submit="send-email" phx-change="validate">
+        <label class="text-sm font-medium text-zinc-700">Email</label>
+        <.input type="text" field={@form[:email]} phx-debounce="750" />
+        <button type="submit" phx-disable-with="sending otp...">send otp</button>
+      </.form>
+    </div>
+  <% else %>
+    <div>
+      <.form
+        id="otp-form"
+        for={@form}
+        phx-submit="submit-otp"
+        action={~p"/login/verify?otp=#{@otp}&token=#{@token}"}
+        phx-trigger-action={@trigger_submit}
+        method="post"
+      >
+        <label class="text-sm font-medium text-zinc-700">OTP</label>
+        <.input type="text" field={@form[:otp]} />
+        <button type="submit" phx-disable-with="checking...">submit</button>
+      </.form>
+    </div>
+  <% end %>
+</div>
