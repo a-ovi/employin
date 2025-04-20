@@ -1,6 +1,8 @@
 defmodule EmployinWeb.Router do
   use EmployinWeb, :router
 
+  import EmployinWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,6 +10,7 @@ defmodule EmployinWeb.Router do
     plug :put_root_layout, html: {EmployinWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_user
   end
 
   pipeline :api do
@@ -15,9 +18,20 @@ defmodule EmployinWeb.Router do
   end
 
   scope "/", EmployinWeb do
-    pipe_through :browser
+    pipe_through [:browser, :ensure_not_authenticated]
 
-    get "/", PageController, :home
+    live "/login", LoginLive
+    live "/profile/setup", RegistrationLive
+    post "/login", SessionController, :login
+    post "/login/verify", SessionController, :otp_check
+    get "/login/verify", SessionController, :otp_check
+  end
+
+  scope "/", EmployinWeb do
+    pipe_through [:browser, :ensure_authenticated]
+
+    live "/", HomeLive
+    get "/logout", SessionController, :logout
   end
 
   # Other scopes may use custom stacks.
