@@ -1,0 +1,28 @@
+<.link href={~p"/logout"}>logout</.link>
+<div>
+  <div>
+    <%= for event <- @events do %>
+      <div>
+        {event.user.display_name}
+        {event.type}
+        at {format_time(event.time || event.inserted_at)}
+      </div>
+    <% end %>
+  </div>
+  <div>
+    <button
+      phx-click="join"
+      phx-value-type={Event.joined()}
+      disabled={@current_status == Event.joined()}
+    >
+      Join
+    </button>
+    <button
+      phx-click="leave"
+      phx-value-type={Event.left()}
+      disabled={@current_status == Event.left()}
+    >
+      Leave
+    </button>
+  </div>
+</div>
