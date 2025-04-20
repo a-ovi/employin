@@ -8,7 +8,8 @@ defmodule EmployinWeb.Endpoint do
     store: :cookie,
     key: "_employin_key",
     signing_salt: "HXV34YrP",
-    same_site: "Lax"
+    same_site: "Lax",
+    max_age: 60 * 60 * 24 * 30
   ]
 
   socket "/live", Phoenix.LiveView.Socket,
