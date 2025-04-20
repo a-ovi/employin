@@ -1,14 +1,14 @@
 defmodule Employin.LoginToken do
 
   @default_otp_len 6
-  @max_age 3*60
-  @secret "JWT_SECRET"
-  @salt "JWT_SALT"
+  @max_age 5*60
+  @secret_name "JWT_SECRET"
+  @salt_name "JWT_SALT"
 
   def create_otp_and_token(data) do
     otp = create_otp()
     signer = get_signer(otp)
-    token = sign(data, signer)
+    token = sign(data, signer: signer)
 
     %{token: token, otp: otp}
   end
@@ -16,7 +16,7 @@ defmodule Employin.LoginToken do
   def verify_token_with_otp(token, otp) do
     signer = get_signer(otp)
 
-    verify(token, signer)
+    verify(token, signer: signer)
   end
 
   def create_otp(len \\ @default_otp_len) do
@@ -29,14 +29,17 @@ defmodule Employin.LoginToken do
     otp
   end
 
-  defp sign(data, signer) do
+  def sign(data, opts \\ []) do
+    signer = Keyword.get(opts, :signer, get_secret())
     salt = get_salt()
     Phoenix.Token.sign(signer, salt, data)
   end
 
-  defp verify(token, signer) do
+  def verify(token, opts \\ []) do
+    signer = Keyword.get(opts, :signer, get_secret())
+    max_age = Keyword.get(opts, :max_age, @max_age)
     salt = get_salt()
-    Phoenix.Token.verify(signer, salt, token, max_age: @max_age)
+    Phoenix.Token.verify(signer, salt, token, max_age: max_age)
   end
 
   defp get_signer(otp) do
@@ -45,11 +48,11 @@ defmodule Employin.LoginToken do
   end
 
   defp get_secret() do
-    System.get_env(@secret)
+    System.get_env(@secret_name)
   end
 
   defp get_salt() do
-    System.get_env(@salt)
+    System.get_env(@salt_name)
   end
 
 end
