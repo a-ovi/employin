@@ -9,6 +9,11 @@ defmodule EmployinWeb.HomeLive do
     user_id = session["user_id"]
     current_status = Events.current_status(user_id)
     events = Events.get_events()
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Employin.PubSub, "events")
+    end
+
     socket =
       socket
       |> assign(:page_title, "Home")
@@ -22,7 +27,11 @@ defmodule EmployinWeb.HomeLive do
   @impl true
   def handle_event("join", params, socket) do
     user_id = socket.assigns.user_id
-    Events.create_event(user_id, params)
+
+    with {:ok, event} <- Events.create_event(user_id, params) do
+      Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
+    end
+
     events = Events.get_events()
     socket =
       socket
@@ -32,9 +41,14 @@ defmodule EmployinWeb.HomeLive do
     {:noreply, socket}
   end
 
+  @impl true
   def handle_event("leave", params, socket) do
     user_id = socket.assigns.user_id
-    Events.create_event(user_id, params)
+
+    with {:ok, event} <- Events.create_event(user_id, params) do
+      Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
+    end
+
     events = Events.get_events()
     socket =
       socket
@@ -44,7 +58,14 @@ defmodule EmployinWeb.HomeLive do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_info({:new_event, _event}, socket) do
+    events = Events.get_events()
+    {:noreply, assign(socket, :events, events)}
+  end
+
   defp format_time(date_time) do
     Calendar.strftime(date_time, "%I:%M %p UTC")
   end
+
 end
