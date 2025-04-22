@@ -4,22 +4,6 @@ defmodule EmployinWeb.LoginLive do
   alias Employin.LoginToken
   alias Employin.MailNotifier
 
-  # @impl true
-  # def mount(%{"token" => token}, _session , socket) do
-  #   error = [otp: {"invalid or expired otp", []}]
-  #   fields = %{"otp" => ""}
-
-  #   socket =
-  #     socket
-  #     |> assign(:step, :enter_otp)
-  #     |> assign(:token, token)
-  #     |> assign(:otp, "")
-  #     |> assign(:trigger_submit, false)
-  #     |> assign(:form, to_form(fields, errors: error, action: :validate))
-
-  #   {:ok, socket}
-  # end
-
   @impl true
   def mount(_params, _session, socket) do
     socket =
@@ -35,7 +19,7 @@ defmodule EmployinWeb.LoginLive do
   end
 
   @impl true
-  def handle_event("validate",  %{"user" => user_email}, socket) do
+  def handle_event("validate", %{"user" => user_email}, socket) do
     form =
       %User{}
       |> User.change_email(user_email)
@@ -45,7 +29,9 @@ defmodule EmployinWeb.LoginLive do
   end
 
   @impl true
-  def handle_event("send-email", %{"user" => user_email}, socket) do
+  def handle_event("send-otp", %{"user" => user_email}, socket) do
+    Process.sleep(1000)
+
     email_changeset =
       User.change_email(%User{}, user_email)
 
@@ -55,15 +41,16 @@ defmodule EmployinWeb.LoginLive do
       %{token: token, otp: otp} = LoginToken.create_otp_and_token(email)
       # send token via mailer
       url = get_url(token, otp)
+
       socket =
-        case MailNotifier.login_instructions(email, url, otp) do
+        case send_email(email, url, otp) do
           {:ok, _meta} ->
             put_flash(socket, :info, "OTP Sent")
+
           {:error, _error} ->
             put_flash(socket, :error, "Can't send otp")
         end
-      IO.inspect(otp, label: "----------> OTP")
-      IO.inspect(token, label: "----------> TOKEN")
+
       {
         :noreply,
         socket
@@ -79,9 +66,12 @@ defmodule EmployinWeb.LoginLive do
   @impl true
   def handle_event("submit-otp", %{"otp" => otp}, socket) do
     token = socket.assigns.token
+    Process.sleep(1000)
+
     case LoginToken.verify_token_with_otp(token, otp) do
       {:ok, _} ->
         {:noreply, assign(socket, trigger_submit: true)}
+
       {:error, _} ->
         error = [otp: {"invalid or expired otp", []}]
         fields = %{"otp" => ""}
@@ -96,18 +86,33 @@ defmodule EmployinWeb.LoginLive do
     end
   end
 
-  # @impl true
-  # def handle_event("submit-otp", %{"otp" => otp}, socket) do
-  #   {
-  #     :noreply,
-  #     socket
-  #     |> assign(:trigger_submit, true)
-  #     |> assign(:otp, otp)
-  #   }
-  # end
+  def handle_event("back-to-email", _params, socket) do
+    socket =
+      socket
+      |> assign(:step, :enter_email)
+      |> assign(:token, "")
+      |> assign(:otp, "")
+      |> assign(:form, %User{} |> Ecto.Changeset.change() |> to_form())
 
-  def get_url(token, otp) do
-    url(~p"/login/verify?token=#{token}&otp=#{otp}")
+    {:noreply, socket}
   end
 
+  defp send_email(email, url, otp) do
+    if Application.get_env(:employin, :env) == :prod do
+      MailNotifier.login_instructions(email, url, otp)
+    else
+      # In development, just log to terminal instead of sending email
+      Process.sleep(1000)
+      IO.puts("\n=== DEVELOPMENT MODE: Email Not Sent ===")
+      IO.puts("To: #{email}")
+      IO.puts("URL: #{url}")
+      IO.puts("OTP: #{otp}")
+      IO.puts("=======================================\n")
+      {:ok, "success"}
+    end
+  end
+
+  defp get_url(token, otp) do
+    url(~p"/login/verify?token=#{token}&otp=#{otp}")
+  end
 end

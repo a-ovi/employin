@@ -3,3 +3,7 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+.while-submitting { display: none; }
+.phx-submit-loading .while-submitting { display: block; }
+.phx-submit-loading .inner-text { display: none; }
+.inner-text { display: block; }
