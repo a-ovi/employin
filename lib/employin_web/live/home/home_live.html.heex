@@ -183,7 +183,7 @@
       
 <!-- Date Input -->
       <div class="mb-3">
-        <.input type="date" field={@event_form[:start_date]} label="Date" required />
+        <.input type="date" field={@event_form[:starting_date]} label="Date" required />
       </div>
 
 <!-- Time Inputs -->
@@ -191,8 +191,9 @@
         <!-- Hour Select -->
         <div class="w-24">
           <.input
+            prompt="Select"
             type="select"
-            field={@event_form[:start_hour]}
+            field={@event_form[:starting_hour]}
             label="Hour"
             options={Enum.map(1..12, &{String.pad_leading("#{&1}", 2, "0"), &1})}
             required
@@ -202,8 +203,9 @@
 <!-- Minute Select -->
         <div class="w-24">
           <.input
+            prompt="Select"
             type="select"
-            field={@event_form[:start_minute]}
+            field={@event_form[:starting_minute]}
             label="Minute"
             options={Enum.map(0..59, &{String.pad_leading("#{&1}", 2, "0"), &1})}
             required
@@ -216,30 +218,30 @@
             <input
               required
               type="radio"
-              id="start_period_am"
-              name="event_form[start_period]"
+              id="starting_period_am"
+              name="starting_period"
               value="am"
               checked={
-                Phoenix.HTML.Form.normalize_value("radio", @event_form[:start_period].value) ==
+                Phoenix.HTML.Form.normalize_value("radio", @event_form[:starting_period].value) ==
                   "am"
               }
               class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
             />
-            <label for="start_period_am" class="text-sm font-medium text-gray-700">AM</label>
+            <label for="starting_period_am" class="text-sm font-medium text-gray-700">AM</label>
           </div>
           <div class="flex items-center space-x-2">
             <input
               type="radio"
-              id="start_period_pm"
-              name="event_form[start_period]"
+              id="starting_period_pm"
+              name="starting_period"
               value="pm"
               checked={
-                Phoenix.HTML.Form.normalize_value("radio", @event_form[:start_period].value) ==
+                Phoenix.HTML.Form.normalize_value("radio", @event_form[:starting_period].value) ==
                   "pm"
               }
               class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
             />
-            <label for="start_period_pm" class="text-sm font-medium text-gray-700">PM</label>
+            <label for="starting_period_pm" class="text-sm font-medium text-gray-700">PM</label>
           </div>
         </div>
       </div>
@@ -251,7 +253,7 @@
       
 <!-- Date Input -->
       <div class="mb-3">
-        <.input type="date" field={@event_form[:end_date]} label="Date" required />
+        <.input type="date" field={@event_form[:ending_date]} label="Date" required />
       </div>
       
 <!-- Time Inputs -->
@@ -259,8 +261,9 @@
         <!-- Hour Select -->
         <div class="w-24">
           <.input
+            prompt="Select"
             type="select"
-            field={@event_form[:end_hour]}
+            field={@event_form[:ending_hour]}
             label="Hour"
             options={Enum.map(1..12, &{String.pad_leading("#{&1}", 2, "0"), &1})}
             required
@@ -270,8 +273,9 @@
 <!-- Minute Select -->
         <div class="w-24">
           <.input
+            prompt="Select"
             type="select"
-            field={@event_form[:end_minute]}
+            field={@event_form[:ending_minute]}
             label="Minute"
             options={Enum.map(0..59, &{String.pad_leading("#{&1}", 2, "0"), &1})}
             required
@@ -284,28 +288,28 @@
             <input
               required
               type="radio"
-              id="end_period_am"
-              name="event_form[end_period]"
+              id="ending_period_am"
+              name="ending_period"
               value="am"
               checked={
-                Phoenix.HTML.Form.normalize_value("radio", @event_form[:end_period].value) == "am"
+                Phoenix.HTML.Form.normalize_value("radio", @event_form[:ending_period].value) == "am"
               }
               class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
             />
-            <label for="end_period_am" class="text-sm font-medium text-gray-700">AM</label>
+            <label for="ending_period_am" class="text-sm font-medium text-gray-700">AM</label>
           </div>
           <div class="flex items-center space-x-2">
             <input
               type="radio"
-              id="end_period_pm"
-              name="event_form[end_period]"
+              id="ending_period_pm"
+              name="ending_period"
               value="pm"
               checked={
-                Phoenix.HTML.Form.normalize_value("radio", @event_form[:end_period].value) == "pm"
+                Phoenix.HTML.Form.normalize_value("radio", @event_form[:ending_period].value) == "pm"
               }
               class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
             />
-            <label for="end_period_pm" class="text-sm font-medium text-gray-700">PM</label>
+            <label for="ending_period_pm" class="text-sm font-medium text-gray-700">PM</label>
           </div>
         </div>
       </div>
