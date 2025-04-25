@@ -6,6 +6,7 @@ defmodule EmployinWeb.HomeLive do
 
   @impl true
   def mount(_params, session, socket) do
+    tz_offset = get_tz_offset(socket)
     user_id = session["user_id"]
     current_status = Events.current_status(user_id)
     events = Events.get_events()
@@ -22,6 +23,7 @@ defmodule EmployinWeb.HomeLive do
       socket
       |> assign(:page_title, "Home")
       |> assign(:user_id, user_id)
+      |> assign(:tz_offset, tz_offset)
       |> assign(:events, events)
       |> assign(:current_status, current_status)
       |> assign(:show_event_modal, false)
@@ -104,8 +106,14 @@ defmodule EmployinWeb.HomeLive do
     {:noreply, assign(socket, :events, events)}
   end
 
-  defp format_time(date_time) do
-    Calendar.strftime(date_time, "%d %B %I:%M %p")
+  def format_time(date_time, tz_offset \\ 0) do
+    date_time
+    |> DateTime.shift(minute: tz_offset)
+    |> Calendar.strftime("%d %b %I:%M %p")
+  end
+
+  defp get_tz_offset(socket) do
+    get_connect_params(socket)["tz_offset"] || 0
   end
 
 end
