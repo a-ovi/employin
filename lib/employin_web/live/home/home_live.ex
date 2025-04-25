@@ -14,12 +14,18 @@ defmodule EmployinWeb.HomeLive do
       Phoenix.PubSub.subscribe(Employin.PubSub, "events")
     end
 
+    # event_form =
+    #   %{"start_date" => Date.utc_today(), "end_date" => Date.utc_today()}
+    #   |> to_form()
+
     socket =
       socket
       |> assign(:page_title, "Home")
       |> assign(:user_id, user_id)
       |> assign(:events, events)
       |> assign(:current_status, current_status)
+      |> assign(:show_event_modal, false)
+      # |> assign(:event_form, %{})
 
     {:ok, socket}
   end
@@ -59,13 +65,47 @@ defmodule EmployinWeb.HomeLive do
   end
 
   @impl true
+  def handle_event("show_event_modal", _params, socket) do
+    event_form =
+      %{"start_date" => Date.utc_today(), "end_date" => Date.utc_today()}
+      |> to_form()
+
+    socket =
+      socket
+      |> assign(:show_event_modal, true)
+      |> assign(:event_form, event_form)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("save_event", params, socket) do
+    IO.inspect(params, label: "--------->")
+
+    socket =
+      socket
+      |> assign(:show_event_modal, false)
+
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("close_modal", _unsigned_params, socket) do
+    socket =
+      socket
+      |> assign(:show_event_modal, false)
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info({:new_event, _event}, socket) do
     events = Events.get_events()
     {:noreply, assign(socket, :events, events)}
   end
 
   defp format_time(date_time) do
-    Calendar.strftime(date_time, "%I:%M %p UTC")
+    Calendar.strftime(date_time, "%d %B %I:%M %p")
   end
 
 end

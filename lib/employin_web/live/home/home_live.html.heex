@@ -25,7 +25,7 @@
     </div>
   </header>
   
-  <!-- Main Content - Two-section layout with responsive heights -->
+<!-- Main Content - Two-section layout with responsive heights -->
   <main class="flex-grow flex flex-col w-full mx-auto px-4 py-6 md:px-0 sm:py-4 overflow-hidden justify-between">
     <!-- Activity Log - Responsive width and height with internal scrolling -->
     <div class="w-full flex-1 md:w-[500px] mx-0 sm:mx-auto bg-white shadow rounded-lg mb-8 sm:mb-4 flex flex-col h-[calc(100vh-18rem)] sm:h-[calc(100vh-15rem)]">
@@ -46,9 +46,12 @@
                     else
                       "bg-red-500"
                     end
-                  }></div>
+                  }>
+                  </div>
                   <div class="flex flex-col sm:flex-row sm:items-center w-full overflow-hidden">
-                    <span class="font-medium text-gray-900 sm:mr-1 truncate">{event.user.display_name}</span>
+                    <span class="font-medium text-gray-900 sm:mr-1 truncate">
+                      {event.user.display_name}
+                    </span>
                     <span class="text-sm text-gray-500 truncate">({event.user.email})</span>
                   </div>
                 </div>
@@ -68,7 +71,7 @@
       </div>
     </div>
     
-    <!-- Status Card - Adaptive height, with width constraints matching activity log -->
+<!-- Status Card - Adaptive height, with width constraints matching activity log -->
     <div class="w-full md:w-[500px] mx-0 sm:mx-auto bg-white shadow rounded-lg p-2 h-auto min-h-[8rem] sm:min-h-[8rem] flex flex-col mb-0 sm:mb-8 flex-shrink-0">
       <div class="relative flex items-baseline">
         <span class="relative flex h-3 w-3 ">
@@ -79,7 +82,8 @@
             else
               "bg-red-400"
             end
-          }></span>
+          }>
+          </span>
           <span class={
             "relative inline-flex rounded-full h-3 w-3 " <>
             if @current_status == Event.joined() do
@@ -87,59 +91,240 @@
             else
               "bg-red-500"
             end
-          }></span>
+          }>
+          </span>
         </span>
         <h2 class="text-lg font-medium text-gray-700 ml-2">
           {if @current_status == Event.joined(), do: "Currently Working", else: "Not Working"}
         </h2>
       </div>
-      
+
       <div class="flex flex-grow items-center">
-        <!-- Single action button that changes based on status -->
-        <%= if @current_status == Event.joined() do %>
+        <!-- Split button: main action + time button -->
+        <div class="w-full flex space-x-1">
+          <%= if @current_status == Event.joined() do %>
+            <button
+              phx-click="leave"
+              phx-value-type={Event.left()}
+              class="flex-grow px-4 py-2 sm:py-3 rounded-lg font-semibold shadow text-white bg-red-500 hover:bg-red-600 transition-colors duration-200 flex items-center justify-center gap-2 h-12 sm:h-14"
+            >
+              <svg
+                class="w-5 h-5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              End Work
+            </button>
+          <% else %>
+            <button
+              phx-click="join"
+              phx-value-type={Event.joined()}
+              class="flex-grow px-4 py-2 sm:py-3 rounded-lg font-semibold shadow text-white bg-green-500 hover:bg-green-600 transition-colors duration-200 flex items-center justify-center gap-2 h-12 sm:h-14"
+            >
+              <svg
+                class="w-5 h-5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                />
+              </svg>
+              Start Work
+            </button>
+          <% end %>
+          <!-- Fixed color time button for custom event -->
           <button
-            phx-click="leave"
-            phx-value-type={Event.left()}
-            class="w-full px-4 py-2 sm:py-3 rounded-lg font-semibold shadow text-white bg-red-500 hover:bg-red-600 transition-colors duration-200 flex items-center justify-center gap-2 h-12 sm:h-14"
+            class="w-14 sm:w-16 px-2 py-2 sm:py-3 rounded-md border border-gray-300 shadow-sm bg-white hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center h-12 sm:h-14 focus:outline-none focus:ring-0 focus:ring-transparent"
+            phx-click="show_event_modal"
+            title="Create Custom Event"
           >
             <svg
-              class="w-5 h-5 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+              shape-rendering="geometricPrecision"
+              text-rendering="geometricPrecision"
+              image-rendering="optimizeQuality"
+              fill-rule="evenodd"
+              clip-rule="evenodd"
+              viewBox="0 0 512 406.6"
+              width="30" 
+              height="30"
+              class="flex-shrink-0"
+              fill="#4B5563"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
+              <path d="M334.1 1.64a202.504 202.504 0 0 1 135.16 77.02c68.84 88.6 52.82 216.19-35.78 285.03-.08.05-.14.11-.22.18-88.57 68.82-216.15 52.81-284.97-35.76-.04-.06-.09-.12-.14-.17A204.822 204.822 0 0 1 125.31 291a168.69 168.69 0 0 0 37.79-5.42 172.61 172.61 0 0 0 13.55 20.29c56.7 72.81 161.67 85.86 234.46 29.15 72.8-56.69 85.84-161.66 29.15-234.46-40.28-51.71-107.08-75.09-170.82-59.79a171.08 171.08 0 0 0-21.88-31.29c2.46-.8 4.95-1.51 7.46-2.21 25.77-7.13 52.69-9.03 79.19-5.63h-.11zM0 129.16v-15.4C3.97 50.8 56.26.95 120.21.92h.05c66.58-.01 120.55 53.93 120.59 120.51.03 66.58-53.93 120.56-120.51 120.59C56.33 242.04 3.97 192.17 0 129.16zm99.37-57.37c-.05-6.21-.64-10.65 7.07-10.54l24.98.3c8.05-.05 10.19 2.51 10.09 10.05v28.8h28.6c6.2-.05 10.65-.62 10.54 7.09l-.31 24.96c.05 8.06-2.5 10.21-10.04 10.11h-28.79v28.77c.1 7.55-2.04 10.11-10.09 10.06l-24.98.3c-7.71.12-7.12-4.33-7.07-10.54v-28.59h-28.8c-7.56.1-10.12-2.05-10.07-10.11l-.28-24.96c-.13-7.71 4.31-7.14 10.52-7.09h28.63V71.79zm198.25 32.72c1.24-9.88 10.24-16.88 20.09-15.64h.04c9.82 1.32 16.73 10.32 15.46 20.13l-11.7 94.09 65.06 50.55c7.85 6.1 9.3 17.4 3.2 25.28a18.011 18.011 0 0 1-11.95 6.82c-4.73.62-9.51-.68-13.26-3.62l-72.82-56.61a17.818 17.818 0 0 1-5.79-7.08 18.336 18.336 0 0 1-1.46-9.67l13.13-104.2v-.05z" />
             </svg>
-            End Work
           </button>
-        <% else %>
-          <button
-            phx-click="join"
-            phx-value-type={Event.joined()}
-            class="w-full px-4 py-2 sm:py-3 rounded-lg font-semibold shadow text-white bg-green-500 hover:bg-green-600 transition-colors duration-200 flex items-center justify-center gap-2 h-12 sm:h-14"
-          >
-            <svg
-              class="w-5 h-5 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-              />
-            </svg>
-            Start Work
-          </button>
-        <% end %>
+        </div>
       </div>
     </div>
   </main>
 </div>
+
+<.modal :if={@show_event_modal} id="event-modal" show={@show_event_modal} on_cancel={JS.push("close_modal")}>
+  <h1 class="text-3xl font-bold mb-4">Create Event</h1>
+  
+  <.form for={@event_form} id="event-form" phx-submit="save_event">
+    <!-- Start Time Section -->
+    <div class="mb-4">
+      <h4 class="font-bold mb-2">Start Work</h4>
+      
+<!-- Date Input -->
+      <div class="mb-3">
+        <.input type="date" field={@event_form[:start_date]} label="Date" required />
+      </div>
+
+<!-- Time Inputs -->
+      <div class="flex flex-wrap items-end gap-2">
+        <!-- Hour Select -->
+        <div class="w-24">
+          <.input
+            type="select"
+            field={@event_form[:start_hour]}
+            label="Hour"
+            options={Enum.map(1..12, &{String.pad_leading("#{&1}", 2, "0"), &1})}
+            required
+          />
+        </div>
+        
+<!-- Minute Select -->
+        <div class="w-24">
+          <.input
+            type="select"
+            field={@event_form[:start_minute]}
+            label="Minute"
+            options={Enum.map(0..59, &{String.pad_leading("#{&1}", 2, "0"), &1})}
+            required
+          />
+        </div>
+        
+<!-- AM/PM Radio -->
+        <div class="flex items-center space-x-4 ml-2">
+          <div class="flex items-center space-x-2">
+            <input
+              required
+              type="radio"
+              id="start_period_am"
+              name="event_form[start_period]"
+              value="am"
+              checked={
+                Phoenix.HTML.Form.normalize_value("radio", @event_form[:start_period].value) ==
+                  "am"
+              }
+              class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
+            />
+            <label for="start_period_am" class="text-sm font-medium text-gray-700">AM</label>
+          </div>
+          <div class="flex items-center space-x-2">
+            <input
+              type="radio"
+              id="start_period_pm"
+              name="event_form[start_period]"
+              value="pm"
+              checked={
+                Phoenix.HTML.Form.normalize_value("radio", @event_form[:start_period].value) ==
+                  "pm"
+              }
+              class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
+            />
+            <label for="start_period_pm" class="text-sm font-medium text-gray-700">PM</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+<!-- End Time Section -->
+    <div class="mb-4">
+      <h4 class="font-bold mb-2">End Work</h4>
+      
+<!-- Date Input -->
+      <div class="mb-3">
+        <.input type="date" field={@event_form[:end_date]} label="Date" required />
+      </div>
+      
+<!-- Time Inputs -->
+      <div class="flex flex-wrap items-end gap-2">
+        <!-- Hour Select -->
+        <div class="w-24">
+          <.input
+            type="select"
+            field={@event_form[:end_hour]}
+            label="Hour"
+            options={Enum.map(1..12, &{String.pad_leading("#{&1}", 2, "0"), &1})}
+            required
+          />
+        </div>
+        
+<!-- Minute Select -->
+        <div class="w-24">
+          <.input
+            type="select"
+            field={@event_form[:end_minute]}
+            label="Minute"
+            options={Enum.map(0..59, &{String.pad_leading("#{&1}", 2, "0"), &1})}
+            required
+          />
+        </div>
+        
+<!-- AM/PM Radio -->
+        <div class="flex items-center space-x-4 ml-2">
+          <div class="flex items-center space-x-2">
+            <input
+              required
+              type="radio"
+              id="end_period_am"
+              name="event_form[end_period]"
+              value="am"
+              checked={
+                Phoenix.HTML.Form.normalize_value("radio", @event_form[:end_period].value) == "am"
+              }
+              class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
+            />
+            <label for="end_period_am" class="text-sm font-medium text-gray-700">AM</label>
+          </div>
+          <div class="flex items-center space-x-2">
+            <input
+              type="radio"
+              id="end_period_pm"
+              name="event_form[end_period]"
+              value="pm"
+              checked={
+                Phoenix.HTML.Form.normalize_value("radio", @event_form[:end_period].value) == "pm"
+              }
+              class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
+            />
+            <label for="end_period_pm" class="text-sm font-medium text-gray-700">PM</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-8 flex gap-x-2">
+      <button
+        type="button"
+        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        phx-click="close_modal"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        form="event-form"
+        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        Create
+      </button>
+    </div>
+  </.form>
+</.modal>
