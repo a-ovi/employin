@@ -159,7 +159,7 @@
               fill-rule="evenodd"
               clip-rule="evenodd"
               viewBox="0 0 512 406.6"
-              width="30" 
+              width="30"
               height="30"
               class="flex-shrink-0"
               fill="#4B5563"
@@ -173,75 +173,89 @@
   </main>
 </div>
 
-<.modal :if={@show_event_modal} id="event-modal" show={@show_event_modal} on_cancel={JS.push("close_modal")}>
+<.modal
+  :if={@show_event_modal}
+  id="event-modal"
+  show={@show_event_modal}
+  on_cancel={JS.push("close_modal")}
+>
   <h1 class="text-3xl font-bold mb-4">Create Event</h1>
-  
-  <.form for={@event_form} id="event-form" phx-submit="save_event">
+
+  <.form for={@form} id="event-form" phx-submit="submit-form" phx-change="validate-form">
     <!-- Start Time Section -->
     <div class="mb-4">
       <h4 class="font-bold mb-2">Start Work</h4>
       
 <!-- Date Input -->
-      <div class="mb-3">
-        <.input type="date" field={@event_form[:starting_date]} label="Date" required />
+      <div class="mb-3 class=w-48">
+        <.input type="date" field={@form[:starting_date]} label="Date" />
       </div>
-
+      
 <!-- Time Inputs -->
-      <div class="flex flex-wrap items-end gap-2">
+      <div class="flex flex-wrap items-start gap-x-4">
         <!-- Hour Select -->
-        <div class="w-24">
+        <div class="w-30 sm:w-36">
           <.input
             prompt="Select"
             type="select"
-            field={@event_form[:starting_hour]}
+            field={@form[:starting_hour]}
             label="Hour"
             options={Enum.map(1..12, &{String.pad_leading("#{&1}", 2, "0"), &1})}
-            required
           />
         </div>
         
 <!-- Minute Select -->
-        <div class="w-24">
+        <div class="w-30 sm:w-36">
           <.input
             prompt="Select"
             type="select"
-            field={@event_form[:starting_minute]}
+            field={@form[:starting_minute]}
             label="Minute"
             options={Enum.map(0..59, &{String.pad_leading("#{&1}", 2, "0"), &1})}
-            required
           />
         </div>
         
 <!-- AM/PM Radio -->
-        <div class="flex items-center space-x-4 ml-2">
-          <div class="flex items-center space-x-2">
-            <input
-              required
-              type="radio"
-              id="starting_period_am"
-              name="starting_period"
-              value="am"
-              checked={
-                Phoenix.HTML.Form.normalize_value("radio", @event_form[:starting_period].value) ==
-                  "am"
-              }
-              class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
-            />
-            <label for="starting_period_am" class="text-sm font-medium text-gray-700">AM</label>
+        <div class="flex flex-col items-start w-32 mt-4 sm:ml-2 sm:mt-8">
+          <div class="flex items-center gap-x-4">
+            <input type="hidden" name="date_form[starting_period]" value="" />
+            <div class="flex items-center gap-x-2">
+              <input
+                type="radio"
+                id="starting_period_am"
+                name="date_form[starting_period]"
+                value="am"
+                checked={
+                  Phoenix.HTML.Form.normalize_value("radio", @form[:starting_period].value) ==
+                    "am"
+                }
+                class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
+              />
+              <label for="starting_period_am" class="text-sm font-medium text-gray-700">AM</label>
+            </div>
+            <div class="flex items-center gap-x-2">
+              <input
+                type="radio"
+                id="starting_period_pm"
+                name="date_form[starting_period]"
+                value="pm"
+                checked={
+                  Phoenix.HTML.Form.normalize_value("radio", @form[:starting_period].value) ==
+                    "pm"
+                }
+                class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
+              />
+              <label for="starting_period_pm" class="text-sm font-medium text-gray-700">PM</label>
+            </div>
           </div>
-          <div class="flex items-center space-x-2">
-            <input
-              type="radio"
-              id="starting_period_pm"
-              name="starting_period"
-              value="pm"
-              checked={
-                Phoenix.HTML.Form.normalize_value("radio", @event_form[:starting_period].value) ==
-                  "pm"
-              }
-              class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
-            />
-            <label for="starting_period_pm" class="text-sm font-medium text-gray-700">PM</label>
+          <div :if={@form.params["_unused_starting_period"] != ""} class="mt-1 sm:mt-0">
+            <p
+              :for={msg <- Enum.map(@form[:starting_period].errors, &translate_error(&1))}
+              class="mt-1 flex gap-2 text-sm leading-6 text-rose-600"
+            >
+              <.icon name="hero-exclamation-circle-mini" class="-ml-0.5 mt-0.5 h-5 w-5 flex-none" />
+              {msg}
+            </p>
           </div>
         </div>
       </div>
@@ -253,67 +267,86 @@
       
 <!-- Date Input -->
       <div class="mb-3">
-        <.input type="date" field={@event_form[:ending_date]} label="Date" required />
+        <.input type="date" field={@form[:ending_date]} label="Date" />
       </div>
       
 <!-- Time Inputs -->
-      <div class="flex flex-wrap items-end gap-2">
+      <div class="flex flex-wrap items-start gap-x-4">
         <!-- Hour Select -->
-        <div class="w-24">
+        <div class="w-30 sm:w-36">
           <.input
             prompt="Select"
             type="select"
-            field={@event_form[:ending_hour]}
+            field={@form[:ending_hour]}
             label="Hour"
             options={Enum.map(1..12, &{String.pad_leading("#{&1}", 2, "0"), &1})}
-            required
           />
         </div>
         
 <!-- Minute Select -->
-        <div class="w-24">
+        <div class="w-30 sm:w-36">
           <.input
             prompt="Select"
             type="select"
-            field={@event_form[:ending_minute]}
+            field={@form[:ending_minute]}
             label="Minute"
             options={Enum.map(0..59, &{String.pad_leading("#{&1}", 2, "0"), &1})}
-            required
           />
         </div>
         
 <!-- AM/PM Radio -->
-        <div class="flex items-center space-x-4 ml-2">
-          <div class="flex items-center space-x-2">
-            <input
-              required
-              type="radio"
-              id="ending_period_am"
-              name="ending_period"
-              value="am"
-              checked={
-                Phoenix.HTML.Form.normalize_value("radio", @event_form[:ending_period].value) == "am"
-              }
-              class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
-            />
-            <label for="ending_period_am" class="text-sm font-medium text-gray-700">AM</label>
+        <div class="flex flex-col items-start w-32 mt-4 sm:ml-2 sm:mt-8">
+          <div class="flex items-center gap-x-4">
+            <input type="hidden" name="date_form[ending_period]" value="" />
+            <div class="flex items-center gap-x-2">
+              <input
+                type="radio"
+                id="ending_period_am"
+                name="date_form[ending_period]"
+                value="am"
+                checked={
+                  Phoenix.HTML.Form.normalize_value("radio", @form[:ending_period].value) ==
+                    "am"
+                }
+                class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
+              />
+              <label for="ending_period_am" class="text-sm font-medium text-gray-700">AM</label>
+            </div>
+            <div class="flex items-center gap-x-2">
+              <input
+                type="radio"
+                id="starting_period_pm"
+                name="date_form[ending_period]"
+                value="pm"
+                checked={
+                  Phoenix.HTML.Form.normalize_value("radio", @form[:ending_period].value) ==
+                    "pm"
+                }
+                class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
+              />
+              <label for="ending_period_pm" class="text-sm font-medium text-gray-700">PM</label>
+            </div>
           </div>
-          <div class="flex items-center space-x-2">
-            <input
-              type="radio"
-              id="ending_period_pm"
-              name="ending_period"
-              value="pm"
-              checked={
-                Phoenix.HTML.Form.normalize_value("radio", @event_form[:ending_period].value) == "pm"
-              }
-              class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-0 focus:outline-none"
-            />
-            <label for="ending_period_pm" class="text-sm font-medium text-gray-700">PM</label>
+          <div :if={@form.params["_unused_ending_period"] != ""} class="mt-1 sm:mt-0">
+            <p
+              :for={msg <- Enum.map(@form[:ending_period].errors, &translate_error(&1))}
+              class="mt-1 flex gap-2 text-sm leading-6 text-rose-600"
+            >
+              <.icon name="hero-exclamation-circle-mini" class="-ml-0.5 mt-0.5 h-5 w-5 flex-none" />
+              {msg}
+            </p>
           </div>
         </div>
       </div>
     </div>
+
+    <.error :for={msg <- Enum.map(@form[:ending_date_time].errors, &translate_error(&1))}>
+      {msg}
+    </.error>
+    <.error :for={msg <- Enum.map(@form[:overlap].errors, &translate_error(&1))}>
+      {msg}
+    </.error>
+    <!-- action buttons -->
     <div class="mt-8 flex gap-x-2">
       <button
         type="button"
@@ -325,7 +358,8 @@
       <button
         type="submit"
         form="event-form"
-        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        phx-disable-with="Creating..."
+        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-200 disabled:pointer-events-none"
       >
         Create
       </button>
