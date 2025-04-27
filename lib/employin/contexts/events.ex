@@ -6,7 +6,8 @@ defmodule Employin.Events do
   alias Employin.Repo
 
   def create_event(id, attrs) do
-    attrs = update_time_field_to_utc(attrs)
+    # attrs = update_time_field_to_utc(attrs)
+
     Users.get(id)
     |> Ecto.build_assoc(:events)
     |> Event.changeset(attrs)
@@ -60,9 +61,54 @@ defmodule Employin.Events do
     case get_last_event_by_user_id(user_id) do
       nil ->
         Event.left()
+
       event ->
         event.type
     end
+  end
+
+  def can_insert?(user_id, start_time, end_time) do
+    # Find event immediately before the starting date
+    before_starting_date_query =
+      from e in Event,
+        where: e.user_id == ^user_id,
+        where: fragment("COALESCE(?, ?)", e.time, e.inserted_at) < ^start_time,
+        order_by: [desc: fragment("COALESCE(?, ?)", e.time, e.inserted_at)],
+        limit: 1
+
+    last_event_before_starting_date = Repo.one(before_starting_date_query)
+
+    # Find event immediately after the ending date
+    after_ending_date_query =
+      from e in Event,
+        where: e.user_id == ^user_id,
+        where: fragment("COALESCE(?, ?)", e.time, e.inserted_at) > ^end_time,
+        order_by: [asc: fragment("COALESCE(?, ?)", e.time, e.inserted_at)],
+        limit: 1
+
+    first_event_after_ending_date = Repo.one(after_ending_date_query)
+
+    # Get count of events between start_time and end_time (including both)
+    between_count_query =
+      from e in Event,
+        where: e.user_id == ^user_id,
+        where: fragment("COALESCE(?, ?)", e.time, e.inserted_at) >= ^start_time,
+        where: fragment("COALESCE(?, ?)", e.time, e.inserted_at) <= ^end_time,
+        select: count(e.id)
+
+    between_count = Repo.one(between_count_query)
+
+    no_events_between = between_count == 0
+
+    valid_event_before =
+      last_event_before_starting_date == nil ||
+        last_event_before_starting_date.type == Event.left()
+
+    valid_event_after =
+      first_event_after_ending_date == nil ||
+        first_event_after_ending_date.type == Event.joined()
+
+    no_events_between && valid_event_before && valid_event_after
   end
 
   defp paginate(query, opts) do
@@ -71,6 +117,7 @@ defmodule Employin.Events do
 
     if per_page do
       offset = (page - 1) * per_page
+
       query
       |> limit(^per_page)
       |> offset(^offset)
@@ -101,7 +148,7 @@ defmodule Employin.Events do
     if is_integer(value) do
       value
     else
-      {value, _ } = Integer.parse(value)
+      {value, _} = Integer.parse(value)
       value
     end
   end
