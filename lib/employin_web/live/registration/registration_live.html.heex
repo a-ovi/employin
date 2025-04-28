@@ -12,7 +12,7 @@
       for={@form}
       phx-submit="submit"
       phx-change="validate"
-      action={~p"/login?&token=#{@token}"}
+      action={~p"/login/with_token?token=#{@token}"}
       phx-trigger-action={@trigger_submit}
       method="post"
       class="space-y-3 sm:space-y-4"

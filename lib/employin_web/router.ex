@@ -22,7 +22,8 @@ defmodule EmployinWeb.Router do
 
     live "/login", LoginLive
     live "/profile/setup", RegistrationLive
-    post "/login", SessionController, :login
+    post "/login/with_token", SessionController, :login
+    get "/login/with_token", SessionController, :login
     post "/login/verify", SessionController, :otp_check
     get "/login/verify", SessionController, :otp_check
   end
