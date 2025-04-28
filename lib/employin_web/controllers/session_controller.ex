@@ -14,6 +14,7 @@ defmodule EmployinWeb.SessionController do
         conn
         |> put_status(401)
         |> put_view(EmployinWeb.ErrorHTML)
+        |> put_root_layout(html: {EmployinWeb.ErrorHTML, :root})
         |> render("401_link.html")
     end
   end
@@ -25,6 +26,7 @@ defmodule EmployinWeb.SessionController do
       {:error, _} ->
         conn
         |> put_status(401)
+        |> put_root_layout(html: {EmployinWeb.ErrorHTML, :root})
         |> put_view(EmployinWeb.ErrorHTML)
         |> render("401_login.html")
     end

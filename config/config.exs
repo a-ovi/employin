@@ -17,6 +17,7 @@ config :employin, EmployinWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
     formats: [html: EmployinWeb.ErrorHTML, json: EmployinWeb.ErrorJSON],
+    root_layout: {EmployinWeb.ErrorHTML, :root},
     layout: false
   ],
   pubsub_server: Employin.PubSub,
