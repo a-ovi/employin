@@ -15,7 +15,9 @@ defmodule EmployinWeb.SessionController do
         |> put_status(401)
         |> put_view(EmployinWeb.ErrorHTML)
         |> put_root_layout(html: {EmployinWeb.ErrorHTML, :root})
-        |> render("401_link.html")
+        |> assign(:title, "Invalid or Expired Link")
+        |> assign(:error_msg, "The link you're trying to access is no longer valid or has expired.")
+        |> render("401.html")
     end
   end
 
@@ -26,9 +28,11 @@ defmodule EmployinWeb.SessionController do
       {:error, _} ->
         conn
         |> put_status(401)
-        |> put_root_layout(html: {EmployinWeb.ErrorHTML, :root})
         |> put_view(EmployinWeb.ErrorHTML)
-        |> render("401_login.html")
+        |> put_root_layout(html: {EmployinWeb.ErrorHTML, :root})
+        |> assign(:title, "Login Token Invalid or Expired")
+        |> assign(:error_msg, "Your login token is invalid or has expired. Please login again.")
+        |> render("401.html")
     end
   end
 

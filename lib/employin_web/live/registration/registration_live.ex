@@ -23,7 +23,7 @@ defmodule EmployinWeb.RegistrationLive do
         {
           :ok,
           socket
-          |> put_flash(:error, "Error! Please Login again.")
+          |> put_flash(:error, "Invalid or Expired registration token. Please try again.")
           |> redirect(to: ~p"/login")
         }
     end
