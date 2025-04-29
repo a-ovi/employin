@@ -9,7 +9,6 @@ defmodule EmployinWeb.HomeLive do
     tz_offset = get_tz_offset(socket)
     user_id = session["user_id"]
     current_status = Events.current_status(user_id)
-    events = Events.get_events()
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Employin.PubSub, "events")
@@ -20,9 +19,9 @@ defmodule EmployinWeb.HomeLive do
       |> assign(:page_title, "Home")
       |> assign(:user_id, user_id)
       |> assign(:tz_offset, tz_offset)
-      |> assign(:events, events)
       |> assign(:current_status, current_status)
       |> assign(:show_event_modal, false)
+      |> assign_async(:events, fn -> {:ok, %{events: Events.get_events()}} end)
 
     {:ok, socket}
   end
@@ -35,12 +34,9 @@ defmodule EmployinWeb.HomeLive do
       Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
     end
 
-    events = Events.get_events()
-
     socket =
       socket
       |> assign(:current_status, Event.joined())
-      |> assign(:events, events)
 
     {:noreply, socket}
   end
@@ -53,12 +49,9 @@ defmodule EmployinWeb.HomeLive do
       Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
     end
 
-    events = Events.get_events()
-
     socket =
       socket
       |> assign(:current_status, Event.left())
-      |> assign(:events, events)
 
     {:noreply, socket}
   end
@@ -142,6 +135,7 @@ defmodule EmployinWeb.HomeLive do
               socket
               |> assign(:show_event_modal, false)
               |> put_flash(:info, "Event Created Successfully!")
+
             {:noreply, socket}
           else
             form_changeset =
@@ -172,8 +166,8 @@ defmodule EmployinWeb.HomeLive do
 
   @impl true
   def handle_info({:new_event, _event}, socket) do
-    events = Events.get_events()
-    {:noreply, assign(socket, :events, events)}
+    socket = assign_async(socket, :events, fn -> {:ok, %{events: Events.get_events()}} end)
+    {:noreply, socket}
   end
 
   def create_utc_date_time_from_form_fields(params, tz_offset) do
