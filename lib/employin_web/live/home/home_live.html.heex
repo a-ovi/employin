@@ -90,7 +90,11 @@
             <%= for event <- @events do %>
               <li
                 id={"event-#{event.id}"}
-                class="px-3 sm:px-6 py-3 hover:bg-gray-50 transition-colors duration-300 w-full"
+                phx-mounted={JS.add_class("highlight-fade")}
+                class={[
+                  "px-3 sm:px-6 py-3 hover:bg-gray-50 transition-colors duration-300 w-full",
+                  if(event.highlight?, do: "highlight-fade")
+                ]}
               >
                 <div class="w-full">
                   <!-- Name and email on first line -->

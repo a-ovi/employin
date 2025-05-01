@@ -7,3 +7,16 @@
 .phx-submit-loading .while-submitting { display: block; }
 .phx-submit-loading .inner-text { display: none; }
 .inner-text { display: block; }
+
+@keyframes highlight-fade {
+  from {
+    background-color: #fff9c4; /* light yellow */
+  }
+  to {
+    background-color: #fff; /* white */
+  }
+}
+
+.highlight-fade {
+  animation: highlight-fade 3s ease;
+}

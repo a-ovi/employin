@@ -32,6 +32,7 @@ defmodule EmployinWeb.HomeLive do
   @impl true
   def handle_async(:task_events_loader, {:ok, events}, socket) do
     %{events_loader: events_loader} = socket.assigns
+    events = Enum.map(events, fn event -> Map.put(event, :highlight?, false) end)
 
     socket =
       socket
@@ -191,8 +192,11 @@ defmodule EmployinWeb.HomeLive do
   end
 
   @impl true
-  def handle_info({:new_event, _event}, socket) do
-    events = Events.get_events()
+  def handle_info({:new_event, event}, socket) do
+    events = socket.assigns.events
+    event = Employin.Repo.preload(event, :user)
+    event = Map.put(event, :highlight?, true)
+    events = events ++ [event]
     socket = assign(socket, :events, events)
     {:noreply, socket}
   end
