@@ -32,6 +32,7 @@ defmodule EmployinWeb.HomeLive do
   @impl true
   def handle_async(:task_events_loader, {:ok, events}, socket) do
     %{events_loader: events_loader} = socket.assigns
+    events = extract_event_fields(events)
 
     socket =
       socket
@@ -194,6 +195,7 @@ defmodule EmployinWeb.HomeLive do
   def handle_info({:new_event, event}, socket) do
     events = socket.assigns.events
     event = Employin.Repo.preload(event, :user)
+    event = extract_event_fields(event)
     events = [event | events]
     events = sort_events_by_time(events)
     socket = assign(socket, :events, events)
@@ -201,7 +203,7 @@ defmodule EmployinWeb.HomeLive do
     {:noreply, socket}
   end
 
-  def create_utc_date_time_from_form_fields(params, tz_offset) do
+  defp create_utc_date_time_from_form_fields(params, tz_offset) do
     starting = process_datetime(params, "starting", tz_offset)
     ending = process_datetime(params, "ending", tz_offset)
 
@@ -244,8 +246,30 @@ defmodule EmployinWeb.HomeLive do
   end
 
   defp sort_events_by_time(events) do
-    Enum.sort_by(events, fn event ->
-      event.time || event.inserted_at
-    end, DateTime)
+    Enum.sort_by(
+      events,
+      fn event ->
+        event.time || event.inserted_at
+      end,
+      DateTime
+    )
+  end
+
+  defp extract_event_fields(events) when is_list(events) do
+    Enum.map(events, &extract_event_fields(&1))
+  end
+
+  defp extract_event_fields(event) when is_map(event) do
+    %{
+      id: event.id,
+      user_id: event.user_id,
+      time: event.time,
+      type: event.type,
+      inserted_at: event.inserted_at,
+      user: %{
+        display_name: event.user && event.user.display_name,
+        email: event.user && event.user.email
+      }
+    }
   end
 end
