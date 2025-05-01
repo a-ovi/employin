@@ -196,7 +196,8 @@ defmodule EmployinWeb.HomeLive do
     events = socket.assigns.events
     event = Employin.Repo.preload(event, :user)
     event = Map.put(event, :highlight?, true)
-    events = events ++ [event]
+    events = [event | events]
+    events = sort_events_by_time(events)
     socket = assign(socket, :events, events)
     {:noreply, socket}
   end
@@ -241,5 +242,11 @@ defmodule EmployinWeb.HomeLive do
 
   defp get_tz_offset(socket) do
     get_connect_params(socket)["tz_offset"] || 0
+  end
+
+  defp sort_events_by_time(events) do
+    Enum.sort_by(events, fn event ->
+      event.time || event.inserted_at
+    end, DateTime)
   end
 end
