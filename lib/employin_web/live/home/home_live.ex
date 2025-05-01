@@ -1,4 +1,5 @@
 defmodule EmployinWeb.HomeLive do
+  alias Phoenix.LiveView.AsyncResult
   use EmployinWeb, :live_view
 
   alias Employin.Events
@@ -21,9 +22,34 @@ defmodule EmployinWeb.HomeLive do
       |> assign(:tz_offset, tz_offset)
       |> assign(:current_status, current_status)
       |> assign(:show_event_modal, false)
-      |> assign_async(:events, fn -> {:ok, %{events: Events.get_events()}} end)
+      |> assign(:events, [])
+      |> assign(:events_loader, AsyncResult.loading())
+      |> start_async(:task_events_loader, fn -> Events.get_events() end)
 
     {:ok, socket}
+  end
+
+  @impl true
+  def handle_async(:task_events_loader, {:ok, events}, socket) do
+    %{events_loader: events_loader} = socket.assigns
+
+    socket =
+      socket
+      |> assign(:events, events)
+      |> assign(:events_loader, AsyncResult.ok(events_loader, "ok"))
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_async(:task_events_loader, {:exit, reason}, socket) do
+    %{events_loader: events_loader} = socket.assigns
+
+    socket =
+      socket
+      |> assign(:events_loader, AsyncResult.failed(events_loader, {:error, reason}))
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -166,7 +192,8 @@ defmodule EmployinWeb.HomeLive do
 
   @impl true
   def handle_info({:new_event, _event}, socket) do
-    socket = assign_async(socket, :events, fn -> {:ok, %{events: Events.get_events()}} end)
+    events = Events.get_events()
+    socket = assign(socket, :events, events)
     {:noreply, socket}
   end
 
