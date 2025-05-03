@@ -30,7 +30,6 @@ defmodule EmployinWeb.LoginLive do
 
   @impl true
   def handle_event("send-otp", %{"user" => user_email}, socket) do
-    Process.sleep(1000)
 
     email_changeset =
       User.change_email(%User{}, user_email)
@@ -66,7 +65,6 @@ defmodule EmployinWeb.LoginLive do
   @impl true
   def handle_event("submit-otp", %{"otp" => otp}, socket) do
     token = socket.assigns.token
-    Process.sleep(1000)
 
     case LoginToken.verify_token_with_otp(token, otp) do
       {:ok, _} ->
@@ -102,7 +100,6 @@ defmodule EmployinWeb.LoginLive do
       MailNotifier.login_instructions(email, url, otp)
     else
       # In development, just log to terminal instead of sending email
-      Process.sleep(1000)
       IO.puts("\n=== DEVELOPMENT MODE: Email Not Sent ===")
       IO.puts("To: #{email}")
       IO.puts("URL: #{url}")
