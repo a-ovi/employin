@@ -25,6 +25,7 @@ defmodule EmployinWeb.HomeLive do
       |> assign(:current_status, current_status)
       |> assign(:show_event_modal, false)
       |> assign(:page, 1)
+      |> assign(:more_events?, true)
       |> assign(:events, [])
       |> assign(:events_loader, AsyncResult.loading())
       |> start_async(:task_events_loader, fn -> Events.get_events(page: 1, per_page: @per_page) end)
@@ -198,12 +199,14 @@ defmodule EmployinWeb.HomeLive do
   def handle_event("load-more", _params, socket) do
     page = socket.assigns.page + 1
     events = Events.get_events(page: page, per_page: @per_page)
+    more_events? = length(events) == @per_page
     events = events ++ socket.assigns.events
 
     socket =
       socket
       |> assign(:events, events)
       |> assign(:page, page)
+      |> assign(:more_events?, more_events?)
 
     {:noreply, socket}
   end
