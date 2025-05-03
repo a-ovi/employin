@@ -5,7 +5,7 @@ defmodule EmployinWeb.HomeLive do
   alias Employin.Events
   alias Employin.Events.Event
 
-  @per_page 10
+  @per_page 30
 
   @impl true
   def mount(_params, session, socket) do

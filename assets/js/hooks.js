@@ -1,8 +1,9 @@
 let ScrollToBottom = {
   mounted() {
     this.scrollToBottom();
+    this.isInBufferZone = false; // Track if user is in buffer zone
     
-    // Set up observer to detect when new events are added
+    // Set up observer for new events
     this.observer = new MutationObserver(() => {
       if (this.isAtBottom) {
         this.scrollToBottom();
@@ -10,12 +11,25 @@ let ScrollToBottom = {
     });
     this.observer.observe(this.el, { childList: true, subtree: true });
     
-    // Track if user is scrolled to bottom
+    // Track scrolling
     this.el.addEventListener('scroll', () => {
       this.isAtBottom = this.isScrolledToBottom();
+      
+      // Check if near top for buffer zone loading
+      const currentlyInBufferZone = this.isNearTop();
+      
+      // Special case: if at absolute top, always trigger load-more
+      const atAbsoluteTop = this.el.scrollTop === 0;
+      
+      // Trigger when entering buffer zone OR when at absolute top
+      if ((currentlyInBufferZone && !this.isInBufferZone) || atAbsoluteTop) {
+        this.pushEvent("load-more");
+      }
+      
+      // Update buffer zone state
+      this.isInBufferZone = currentlyInBufferZone;
     });
     
-    // Initially set to true so first update auto-scrolls
     this.isAtBottom = true;
   },
   
@@ -65,14 +79,23 @@ let ScrollToBottom = {
     }
   },
   
+  isNearTop() {
+    // Consider "near top" if within 40% of the top
+    const bufferZone = this.el.scrollHeight * 0.4;
+    return this.el.scrollTop <= bufferZone;
+  },
+  
   scrollToBottom() {
     this.el.scrollTop = this.el.scrollHeight;
   },
   
   isScrolledToBottom() {
-    // Consider "at bottom" if within 30px of the bottom
-    const scrollBottom = this.el.scrollTop + this.el.clientHeight;
-    return scrollBottom >= this.el.scrollHeight - 30;
+    const scrollTop = this.el.scrollTop;
+    const scrollHeight = this.el.scrollHeight;
+    const clientHeight = this.el.clientHeight;
+    
+    // Consider "at bottom" if within 10 pixels of the bottom
+    return scrollHeight - (scrollTop + clientHeight) < 10;
   }
 };
 
