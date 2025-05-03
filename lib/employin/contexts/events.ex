@@ -16,10 +16,11 @@ defmodule Employin.Events do
 
   def get_events(opts \\ []) do
     Event
-    |> order_by([e], asc: fragment("COALESCE(?, ?)", e.time, e.inserted_at))
+    |> order_by([e], desc: fragment("COALESCE(?, ?)", e.time, e.inserted_at))
     |> paginate(opts)
     |> preload(:user)
     |> Repo.all()
+    |> Enum.reverse()
   end
 
   def get_events_by_email(email) do
