@@ -5,6 +5,8 @@ defmodule EmployinWeb.HomeLive do
   alias Employin.Events
   alias Employin.Events.Event
 
+  @per_page 10
+
   @impl true
   def mount(_params, session, socket) do
     tz_offset = get_tz_offset(socket)
@@ -22,9 +24,10 @@ defmodule EmployinWeb.HomeLive do
       |> assign(:tz_offset, tz_offset)
       |> assign(:current_status, current_status)
       |> assign(:show_event_modal, false)
+      |> assign(:page, 1)
       |> assign(:events, [])
       |> assign(:events_loader, AsyncResult.loading())
-      |> start_async(:task_events_loader, fn -> Events.get_events() end)
+      |> start_async(:task_events_loader, fn -> Events.get_events(page: 1, per_page: @per_page) end)
 
     {:ok, socket}
   end
@@ -187,6 +190,20 @@ defmodule EmployinWeb.HomeLive do
     socket =
       socket
       |> assign(:show_event_modal, false)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("load-more", _params, socket) do
+    page = socket.assigns.page + 1
+    events = Events.get_events(page: page, per_page: @per_page)
+    events = events ++ socket.assigns.events
+
+    socket =
+      socket
+      |> assign(:events, events)
+      |> assign(:page, page)
 
     {:noreply, socket}
   end
