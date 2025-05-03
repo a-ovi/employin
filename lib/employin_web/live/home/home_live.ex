@@ -200,7 +200,13 @@ defmodule EmployinWeb.HomeLive do
     page = socket.assigns.page + 1
     events = Events.get_events(page: page, per_page: @per_page)
     more_events? = length(events) == @per_page
-    events = events ++ socket.assigns.events
+
+    events =
+      events
+      |> extract_event_fields()
+      |> Kernel.++(socket.assigns.events)
+      |> Enum.uniq_by(fn e -> e.id end)
+      |> sort_events_by_time()
 
     socket =
       socket
