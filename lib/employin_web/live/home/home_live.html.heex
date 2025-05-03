@@ -86,29 +86,30 @@
               There's no events yet
             </p>
           </div>
+          <div class="py-4 text-center border-b">
+            <button
+              phx-click="load-more"
+              phx-disable-with="loading..."
+              class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-200 disabled:pointer-events-none"
+            >
+              Load Previous
+            </button>
+          </div>
           <ul
             :if={length(@events) > 0}
-            class="flex flex-col justify-center divide-y divide-gray-200 w-full"
+            id="events-list"
+            class="divide-y divide-gray-200 w-full"
           >
-            <div class="py-4 text-center">
-              <button
-                phx-click="load-more"
-                phx-disable-with="loading..."
-                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-200 disabled:pointer-events-none"
-              >
-                Load Previous
-              </button>
-            </div>
-            <div :for={event <- @events}>
-              <li
-                id={"event-#{event.id}"}
-                phx-mounted={JS.transition("highlight-fade", time: 3000, blocking: false)}
-                class="px-3 sm:px-6 py-3 hover:bg-gray-50 transition-colors duration-300 w-full"
-              >
-                <div class="w-full">
-                  <!-- Name and email on first line -->
-                  <div class="flex items-center gap-2 mb-1 w-full">
-                    <div class={
+            <li
+              :for={event <- @events}
+              id={"event-#{event.id}"}
+              phx-mounted={JS.transition("highlight-fade", time: 3000, blocking: false)}
+              class="px-3 sm:px-6 py-3 hover:bg-gray-50 transition-colors duration-300 w-full"
+            >
+              <div class="w-full">
+                <!-- Name and email on first line -->
+                <div class="flex items-center gap-2 mb-1 w-full">
+                  <div class={
                     "w-3 h-3 rounded-full flex-shrink-0 " <>
                     if event.type == Event.joined() do
                       "bg-green-500"
@@ -116,26 +117,25 @@
                       "bg-red-500"
                     end
                   }>
-                    </div>
-                    <div class="flex flex-col sm:flex-row sm:items-center w-full overflow-hidden">
-                      <span class="font-medium text-gray-900 sm:mr-1 truncate">
-                        {event.user.display_name}
-                      </span>
-                      <span class="text-sm text-gray-500 truncate">({event.user.email})</span>
-                    </div>
                   </div>
-                  <!-- Activity and timestamp on second line -->
-                  <div class="flex items-center justify-between mt-1 pl-5 w-full">
-                    <p class="text-sm text-gray-700">
-                      {if event.type == Event.joined(), do: "Started work", else: "Ended work"}
-                    </p>
-                    <span class="text-xs sm:text-sm text-gray-500 ml-2 flex-shrink-0">
-                      {format_time(event.time || event.inserted_at, @tz_offset)}
+                  <div class="flex flex-col sm:flex-row sm:items-center w-full overflow-hidden">
+                    <span class="font-medium text-gray-900 sm:mr-1 truncate">
+                      {event.user.display_name}
                     </span>
+                    <span class="text-sm text-gray-500 truncate">({event.user.email})</span>
                   </div>
                 </div>
-              </li>
-            </div>
+                <!-- Activity and timestamp on second line -->
+                <div class="flex items-center justify-between mt-1 pl-5 w-full">
+                  <p class="text-sm text-gray-700">
+                    {if event.type == Event.joined(), do: "Started work", else: "Ended work"}
+                  </p>
+                  <span class="text-xs sm:text-sm text-gray-500 ml-2 flex-shrink-0">
+                    {format_time(event.time || event.inserted_at, @tz_offset)}
+                  </span>
+                </div>
+              </div>
+            </li>
           </ul>
         </.async_result>
       </div>
