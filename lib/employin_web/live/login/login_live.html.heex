@@ -23,12 +23,7 @@
         @step == :enter_email && "translate-x-0 opacity-100 pointer-events-auto",
         @step != :enter_email && "-translate-x-full opacity-0 pointer-events-none"
       ]}>
-        <.form
-          id="email-form"
-          for={@form}
-          phx-submit="send-otp"
-          phx-change="validate"
-        >
+        <.form id="email-form" for={@form} phx-submit="send-otp" phx-change="validate">
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700">
               Email address
@@ -113,14 +108,26 @@
           </div>
 
           <div class="mt-1">
-            <button
-              type="button"
-              phx-click="resend-otp"
-              phx-disable-with="resending..."
-              class="text-sm text-indigo-600 hover:text-indigo-500 font-medium disabled:text-indigo-400 disabled:cursor-not-allowed"
-            >
-              Resend OTP
-            </button>
+            <%= if @show_countdown do %>
+              <span
+                id="countdown-text"
+                phx-hook="OtpCountdown"
+                class="text-sm text-gray-700"
+                data-original-text="Resend OTP"
+              >
+                Resend OTP in 02:00
+              </span>
+            <% else %>
+              <button
+                id="resend-button"
+                type="button"
+                phx-click="resend-otp"
+                class="text-sm text-indigo-600 hover:text-indigo-500 font-medium disabled:text-gray-500 disabled:cursor-not-allowed"
+                phx-disable-with="Resending..."
+              >
+                Resend OTP
+              </button>
+            <% end %>
           </div>
 
           <div class="mt-6">

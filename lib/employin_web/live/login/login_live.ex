@@ -14,6 +14,7 @@ defmodule EmployinWeb.LoginLive do
       |> assign(:otp, "")
       |> assign(:trigger_submit, false)
       |> assign(:email, "")
+      |> assign(:show_countdown, false)
       |> assign(:form, %User{} |> Ecto.Changeset.change() |> to_form())
 
     {:ok, socket}
@@ -54,6 +55,7 @@ defmodule EmployinWeb.LoginLive do
         |> assign(:step, :enter_otp)
         |> assign(:token, token)
         |> assign(:email, email)
+        |> assign(:show_countdown, true)
         |> assign(:form, to_form(%{"otp" => ""}))
       }
     else
@@ -79,6 +81,17 @@ defmodule EmployinWeb.LoginLive do
     socket =
       socket
       |> assign(:token, token)
+      |> assign(:show_countdown, true)
+      |> push_event("restart-countdown", %{})
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("countdown-finished", _params, socket) do
+    socket =
+      socket
+      |> assign(:show_countdown, false)
 
     {:noreply, socket}
   end
@@ -111,6 +124,8 @@ defmodule EmployinWeb.LoginLive do
       |> assign(:step, :enter_email)
       |> assign(:token, "")
       |> assign(:otp, "")
+      |> assign(:show_countdown, false)
+      |> push_event("reset-global-timer", %{})
       |> assign(:form, %User{} |> Ecto.Changeset.change() |> to_form())
 
     {:noreply, socket}
