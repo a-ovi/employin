@@ -221,20 +221,7 @@ defmodule EmployinWeb.HomeLive do
 
   @impl true
   def handle_info({:new_event, event}, socket) do
-    events = socket.assigns.events
-
-    socket =
-      if events == [] or event_between_current_events?(event, events) do
-        event = Employin.Repo.preload(event, :user)
-        event = extract_event_fields(event)
-        events = [event | events]
-        events = sort_events_by_time(events)
-        assign(socket, :events, events)
-      else
-        socket
-      end
-
-    {:noreply, socket}
+    {:noreply, maybe_add_event_to_socket(socket, event)}
   end
 
   defp create_utc_date_time_from_form_fields(params, tz_offset) do
@@ -311,8 +298,25 @@ defmodule EmployinWeb.HomeLive do
     event_time = event.time || event.inserted_at
     [first_event | _] = events
     first_event_time = first_event.time || first_event.inserted_at
-    IO.inspect(event_time)
-    IO.inspect(first_event_time)
+
     DateTime.compare(event_time, first_event_time) in [:gt, :eq]
+  end
+
+  defp maybe_add_event_to_socket(socket, event) do
+    events = socket.assigns.events
+
+    if events == [] or event_between_current_events?(event, events) do
+      events =
+        event
+        |> Events.preload_user()
+        |> extract_event_fields()
+        |> List.wrap()
+        |> Kernel.++(events)
+        |> sort_events_by_time()
+
+      assign(socket, :events, events)
+    else
+      socket
+    end
   end
 end
