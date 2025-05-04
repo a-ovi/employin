@@ -68,6 +68,10 @@ defmodule Employin.Events do
     end
   end
 
+  def preload_user(event) do
+    Repo.preload(event, :user)
+  end
+
   def can_insert?(user_id, start_time, end_time) do
     # Find event immediately before the starting date
     before_starting_date_query =
