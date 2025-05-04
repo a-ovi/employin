@@ -38,11 +38,9 @@ defmodule EmployinWeb.LoginLive do
       # create otp and token
       %{email: email} = email_changeset.changes
       %{token: token, otp: otp} = LoginToken.create_otp_and_token(email)
-      # send token via mailer
-      url = get_url(token, otp)
 
       socket =
-        case send_email(email, url, otp) do
+        case send_email(email, token, otp) do
           {:ok, _meta} ->
             put_flash(socket, :info, "OTP Sent")
 
@@ -95,7 +93,9 @@ defmodule EmployinWeb.LoginLive do
     {:noreply, socket}
   end
 
-  defp send_email(email, url, otp) do
+  defp send_email(email, token, otp) do
+    url = get_url(token, otp)
+
     if Application.get_env(:employin, :env) == :prod do
       MailNotifier.login_instructions(email, url, otp)
     else
