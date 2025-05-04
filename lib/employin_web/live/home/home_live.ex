@@ -224,7 +224,7 @@ defmodule EmployinWeb.HomeLive do
     events = socket.assigns.events
 
     socket =
-      if event_between_current_events?(event, events) do
+      if events == [] or event_between_current_events?(event, events) do
         event = Employin.Repo.preload(event, :user)
         event = extract_event_fields(event)
         events = [event | events]
