@@ -28,7 +28,9 @@ defmodule EmployinWeb.HomeLive do
       |> assign(:more_events?, true)
       |> assign(:events, [])
       |> assign(:events_loader, AsyncResult.loading())
-      |> start_async(:task_events_loader, fn -> Events.get_events(page: 1, per_page: @per_page) end)
+      |> start_async(:task_events_loader, fn ->
+        Events.get_events(page: 1, per_page: @per_page)
+      end)
 
     {:ok, socket}
   end
@@ -220,11 +222,17 @@ defmodule EmployinWeb.HomeLive do
   @impl true
   def handle_info({:new_event, event}, socket) do
     events = socket.assigns.events
-    event = Employin.Repo.preload(event, :user)
-    event = extract_event_fields(event)
-    events = [event | events]
-    events = sort_events_by_time(events)
-    socket = assign(socket, :events, events)
+
+    socket =
+      if event_between_current_events?(event, events) do
+        event = Employin.Repo.preload(event, :user)
+        event = extract_event_fields(event)
+        events = [event | events]
+        events = sort_events_by_time(events)
+        assign(socket, :events, events)
+      else
+        socket
+      end
 
     {:noreply, socket}
   end
@@ -297,5 +305,14 @@ defmodule EmployinWeb.HomeLive do
         email: event.user && event.user.email
       }
     }
+  end
+
+  defp event_between_current_events?(event, events) do
+    event_time = event.time || event.inserted_at
+    [first_event | _] = events
+    first_event_time = first_event.time || first_event.inserted_at
+    IO.inspect(event_time)
+    IO.inspect(first_event_time)
+    DateTime.compare(event_time, first_event_time) in [:gt, :eq]
   end
 end
