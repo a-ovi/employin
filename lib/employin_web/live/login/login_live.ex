@@ -13,6 +13,7 @@ defmodule EmployinWeb.LoginLive do
       |> assign(:token, "")
       |> assign(:otp, "")
       |> assign(:trigger_submit, false)
+      |> assign(:email, "")
       |> assign(:form, %User{} |> Ecto.Changeset.change() |> to_form())
 
     {:ok, socket}
@@ -30,7 +31,6 @@ defmodule EmployinWeb.LoginLive do
 
   @impl true
   def handle_event("send-otp", %{"user" => user_email}, socket) do
-
     email_changeset =
       User.change_email(%User{}, user_email)
 
@@ -53,11 +53,34 @@ defmodule EmployinWeb.LoginLive do
         socket
         |> assign(:step, :enter_otp)
         |> assign(:token, token)
+        |> assign(:email, email)
         |> assign(:form, to_form(%{"otp" => ""}))
       }
     else
       {:noreply, assign(socket, form: to_form(email_changeset, action: :save))}
     end
+  end
+
+  @impl true
+  def handle_event("resend-otp", _unsigned_params, socket) do
+    email = socket.assigns.email
+
+    %{otp: otp, token: token} = LoginToken.create_otp_and_token(email)
+
+    socket =
+      case send_email(email, token, otp) do
+        {:ok, _meta} ->
+          put_flash(socket, :info, "OTP sent again")
+
+        {:error, _error} ->
+          put_flash(socket, :error, "Can't resend otp")
+      end
+
+    socket =
+      socket
+      |> assign(:token, token)
+
+    {:noreply, socket}
   end
 
   @impl true
