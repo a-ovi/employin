@@ -319,4 +319,17 @@ defmodule EmployinWeb.HomeLive do
       socket
     end
   end
+
+  defp group_events_by_date(events, tz_offset) do
+    events
+    |> Enum.group_by(&tz_shifted_iso_date(&1.time || &1.inserted_at, tz_offset))
+    |> Map.to_list()
+    |> Enum.sort()
+  end
+
+  defp tz_shifted_iso_date(dt, tz_offset) do
+    dt
+    |> DateTime.shift(minute: tz_offset)
+    |> Date.to_iso8601()
+  end
 end

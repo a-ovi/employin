@@ -20,3 +20,20 @@
 .highlight-fade {
   animation: highlight-fade 1.5s ease-out;
 }
+
+.date-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.date-divider::before,
+.date-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e5e7eb;
+  margin: 0 0.75rem;
+}
