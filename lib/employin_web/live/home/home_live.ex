@@ -259,7 +259,7 @@ defmodule EmployinWeb.HomeLive do
   defp format_time(date_time, tz_offset) do
     date_time
     |> DateTime.shift(minute: tz_offset)
-    |> Calendar.strftime("%d %b %I:%M %p")
+    |> Calendar.strftime("%I:%M %p")
   end
 
   defp get_tz_offset(socket) do
