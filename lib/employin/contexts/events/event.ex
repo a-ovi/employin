@@ -5,6 +5,7 @@ defmodule Employin.Events.Event do
 
   @joined "joined"
   @left "left"
+  @tags ["Remote", "On-site"]
   @valid_event_types [@left, @joined]
 
   @time_points [:starting, :ending]
@@ -31,6 +32,7 @@ defmodule Employin.Events.Event do
   schema "events" do
     field :type, :string
     field :time, :utc_datetime
+    field :tags, :string
     belongs_to :user, Employin.Users.User
 
     timestamps()
@@ -38,9 +40,10 @@ defmodule Employin.Events.Event do
 
   def changeset(event, params) do
     event
-    |> cast(params, [:type, :time])
+    |> cast(params, [:type, :time, :tags])
     |> validate_required(:type)
     |> validate_inclusion(:type, @valid_event_types)
+    |> validate_tags()
   end
 
   def form_changeset(params) do
@@ -51,6 +54,7 @@ defmodule Employin.Events.Event do
     |> validate_hour(@hour_only_fields)
     |> validate_minute(@minute_only_fields)
     |> validate_period(@period_only_fields)
+    |> validate_tags()
   end
 
   def joined() do
@@ -94,6 +98,10 @@ defmodule Employin.Events.Event do
       @periods,
       "Period must be AM or PM"
     )
+  end
+
+  def validate_tags(changeset) do
+    validate_inclusion(changeset, :tags, @tags)
   end
 
   defp validate_inclusion_for_multiple_fields(changeset, fields, valid_values, message) do
