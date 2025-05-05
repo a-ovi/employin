@@ -65,6 +65,11 @@ defmodule Employin.Events.Event do
     @left
   end
 
+  def tag(idx) do
+    idx = max(1, idx)
+    Enum.at(@tags, idx - 1)
+  end
+
   def validate_date(changeset, fields) do
     fields = List.wrap(fields)
 
