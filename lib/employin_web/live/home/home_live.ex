@@ -284,6 +284,7 @@ defmodule EmployinWeb.HomeLive do
       user_id: event.user_id,
       time: event.time,
       type: event.type,
+      tags: event.tags,
       inserted_at: event.inserted_at,
       user: %{
         display_name: event.user && event.user.display_name,
