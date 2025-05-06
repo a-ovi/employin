@@ -219,6 +219,15 @@ defmodule EmployinWeb.HomeLive do
 
   @impl true
   def handle_info({:new_event, event}, socket) do
+    socket =
+      if event.user_id == socket.assigns.user_id do
+        socket
+        |> assign(:current_status, Events.current_status_by_event(event))
+        |> assign(:current_location, Events.current_location_by_event(event))
+      else
+        socket
+      end
+
     {:noreply, maybe_add_event_to_socket(socket, event)}
   end
 
