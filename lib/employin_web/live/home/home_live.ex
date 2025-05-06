@@ -11,7 +11,9 @@ defmodule EmployinWeb.HomeLive do
   def mount(_params, session, socket) do
     tz_offset = get_tz_offset(socket)
     user_id = session["user_id"]
-    current_status = Events.current_status(user_id)
+    event = Events.get_last_event_by_user_id(user_id)
+    current_status = Events.current_status_by_event(event)
+    current_location = Events.current_location_by_event(event)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Employin.PubSub, "events")
@@ -23,10 +25,12 @@ defmodule EmployinWeb.HomeLive do
       |> assign(:user_id, user_id)
       |> assign(:tz_offset, tz_offset)
       |> assign(:current_status, current_status)
+      |> assign(:current_location, current_location)
       |> assign(:show_event_modal, false)
       |> assign(:page, 1)
       |> assign(:more_events?, true)
       |> assign(:events, [])
+      |> assign(:quick_event_form, to_form(%{"tags" => current_location}, as: :quick_event_form))
       |> assign(:events_loader, AsyncResult.loading())
       |> start_async(:task_events_loader, fn ->
         Events.get_events(page: 1, per_page: @per_page)
@@ -55,6 +59,34 @@ defmodule EmployinWeb.HomeLive do
     socket =
       socket
       |> assign(:events_loader, AsyncResult.failed(events_loader, {:error, reason}))
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("create-quick-event", params, socket) do
+    attrs = Map.get(params, "quick_event_form", %{})
+
+    type =
+      if socket.assigns.current_status == Event.joined() do
+        Event.left()
+      else
+        Event.joined()
+      end
+
+    tags = Map.get(attrs, "tags", socket.assigns.current_location)
+    attrs = %{"type" => type, "tags" => tags}
+    user_id = socket.assigns.user_id
+
+    with {:ok, event} <- Events.create_event(user_id, attrs) do
+      Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
+    end
+
+    socket =
+      socket
+      |> assign(:current_status, type)
+      |> assign(:current_location, tags)
+      |> assign(:quick_event_form, to_form(%{"tags" => tags}, as: :quick_event_form))
 
     {:noreply, socket}
   end

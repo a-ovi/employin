@@ -121,7 +121,10 @@
           </div>
           <ul :if={length(@events) > 0} id="events-list" class="divide-y divide-gray-200 w-full">
             <%= for {date, grouped_events} <- group_events_by_date(@events, @tz_offset) do %>
-              <li id={"date-#{date}"} class="px-3 sm:px-6 py-2 bg-gray-50 sticky top-0 z-10 border-b">
+              <li
+                id={"date-#{date}"}
+                class="px-3 sm:px-6 py-2 bg-gray-50 sticky top-0 z-10 border-b"
+              >
                 <div class="date-divider">
                   <span>
                     {date
@@ -173,39 +176,64 @@
     </div>
     
 <!-- Status Card - Adaptive height, with width constraints matching activity log -->
-    <div class="w-full md:w-[500px] mx-0 sm:mx-auto bg-white shadow rounded-lg p-2 h-auto min-h-[8rem] sm:min-h-[8rem] flex flex-col mb-0 sm:mb-8 flex-shrink-0">
-      <div class="relative flex items-baseline">
-        <span class="relative flex h-3 w-3 ">
-          <span class={
-            "animate-ping absolute inline-flex h-full w-full rounded-full " <>
-            if @current_status == Event.joined() do
-              "bg-green-400"
-            else
-              "bg-red-400"
-            end
-          }>
+    <form
+      phx-submit="create-quick-event"
+      class="w-full md:w-[500px] mx-0 sm:mx-auto bg-white shadow rounded-lg p-2 h-auto min-h-[8rem] sm:min-h-[8rem] flex flex-col mb-0 sm:mb-8 flex-shrink-0"
+    >
+      <div class="relative flex items-baseline justify-between">
+        <div class="flex items-baseline">
+          <span class="relative flex h-3 w-3 ">
+            <span class={
+              "animate-ping absolute inline-flex h-full w-full rounded-full " <>
+              if @current_status == Event.joined() do
+                "bg-green-400"
+              else
+                "bg-red-400"
+              end
+            }>
+            </span>
+            <span class={
+              "relative inline-flex rounded-full h-3 w-3 " <>
+              if @current_status == Event.joined() do
+                "bg-green-500"
+              else
+                "bg-red-500"
+              end
+            }>
+            </span>
           </span>
-          <span class={
-            "relative inline-flex rounded-full h-3 w-3 " <>
-            if @current_status == Event.joined() do
-              "bg-green-500"
-            else
-              "bg-red-500"
-            end
-          }>
-          </span>
-        </span>
-        <h2 class="text-lg font-medium text-gray-700 ml-2">
-          {if @current_status == Event.joined(), do: "Currently Working", else: "Not Working"}
-        </h2>
+          <h2 class="text-lg font-medium text-gray-700 ml-2">
+            {if @current_status == Event.joined(), do: "Currently Working", else: "Not Working"}
+          </h2>
+        </div>
+        
+<!-- Location tag dropdown - positioned to the right -->
+        <div class="flex items-center gap-2">
+          <span class="mt-2 text-sm font-medium text-gray-600">Location:</span>
+          <.input
+            type="select"
+            id="location-tag"
+            prompt="Select"
+            field={@quick_event_form[:tags]}
+            class={[
+              "h-8 px-2 text-sm rounded-md border shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500",
+              @current_status == Event.joined() &&
+                "bg-gray-100 cursor-not-allowed border-gray-300",
+              @current_status != Event.joined() && "border-gray-300 bg-white"
+            ]}
+            disabled={@current_status == Event.joined()}
+            options={Enum.map([1, 2], &{Event.tag(&1), Event.tag(&1)})}
+            value={@quick_event_form[:tags].value}
+          />
+        </div>
       </div>
 
-      <div class="flex flex-grow items-center">
+      <div class="flex flex-grow items-center flex-col gap-2 mt-4">
         <!-- Split button: main action + time button -->
         <div class="w-full flex space-x-1">
           <%= if @current_status == Event.joined() do %>
             <button
-              phx-click="leave"
+              type="submit"
               phx-value-type={Event.left()}
               class="flex-grow px-4 py-2 sm:py-3 rounded-lg font-semibold shadow text-white bg-red-500 hover:bg-red-600 transition-colors duration-200 flex items-center justify-center gap-2 h-12 sm:h-14"
             >
@@ -226,7 +254,7 @@
             </button>
           <% else %>
             <button
-              phx-click="join"
+              type="submit"
               phx-value-type={Event.joined()}
               class="flex-grow px-4 py-2 sm:py-3 rounded-lg font-semibold shadow text-white bg-green-500 hover:bg-green-600 transition-colors duration-200 flex items-center justify-center gap-2 h-12 sm:h-14"
             >
@@ -270,7 +298,7 @@
           </button>
         </div>
       </div>
-    </div>
+    </form>
   </main>
 </div>
 
