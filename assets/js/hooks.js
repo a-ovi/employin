@@ -38,7 +38,7 @@ let ScrollToBottom = {
     const eventsList = this.el.querySelector("#events-list");
     if (eventsList) {
       // Store info about the first visible event
-      const events = Array.from(eventsList.querySelectorAll('li'));
+      const events = Array.from(eventsList.querySelectorAll('li:not([id^="date-"])'));
 
       for (const event of events) {
         const rect = event.getBoundingClientRect();
