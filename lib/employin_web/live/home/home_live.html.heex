@@ -164,7 +164,10 @@
                       <p class="text-sm text-gray-700">
                         {if event.type == Event.joined(), do: "Started work", else: "Ended work"}
                       </p>
-                      <span :if={event.tags && String.trim(event.tags) != ""} class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-500">
+                      <span
+                        :if={event.tags && String.trim(event.tags) != ""}
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-500"
+                      >
                         {event.tags}
                       </span>
                     </div>
@@ -281,6 +284,7 @@
           <% end %>
           <!-- Fixed color time button for custom event -->
           <button
+            type="button"
             class="w-14 sm:w-16 px-2 py-2 sm:py-3 rounded-md border border-gray-300 shadow-sm bg-white hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center h-12 sm:h-14 focus:outline-none focus:ring-0 focus:ring-transparent"
             phx-click="show_event_modal"
             title="Create Custom Event"
