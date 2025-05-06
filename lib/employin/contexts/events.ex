@@ -58,8 +58,14 @@ defmodule Employin.Events do
     |> order_by([e], desc: fragment("COALESCE(?, ?)", e.time, e.inserted_at))
   end
 
-  def current_status(user_id) do
-    case get_last_event_by_user_id(user_id) do
+  def current_status_by_id(user_id) do
+    user_id
+    |> get_last_event_by_user_id()
+    |> current_status_by_event()
+  end
+
+  def current_status_by_event(event) do
+    case event do
       nil ->
         Event.left()
 
@@ -68,10 +74,16 @@ defmodule Employin.Events do
     end
   end
 
-  def current_location(user_id) do
+  def current_location_by_id(user_id) do
+    user_id
+    |> get_last_event_by_user_id()
+    |> current_location_by_event()
+  end
+
+  def current_location_by_event(event) do
     joined_type = Event.joined()
 
-    case get_last_event_by_user_id(user_id) do
+    case event do
       %{type: ^joined_type, tags: tags} ->
         tags || ""
 
