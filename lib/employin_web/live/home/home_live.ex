@@ -92,36 +92,6 @@ defmodule EmployinWeb.HomeLive do
   end
 
   @impl true
-  def handle_event("join", params, socket) do
-    user_id = socket.assigns.user_id
-
-    with {:ok, event} <- Events.create_event(user_id, params) do
-      Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
-    end
-
-    socket =
-      socket
-      |> assign(:current_status, Event.joined())
-
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("leave", params, socket) do
-    user_id = socket.assigns.user_id
-
-    with {:ok, event} <- Events.create_event(user_id, params) do
-      Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
-    end
-
-    socket =
-      socket
-      |> assign(:current_status, Event.left())
-
-    {:noreply, socket}
-  end
-
-  @impl true
   def handle_event("show_event_modal", _params, socket) do
     today = Date.utc_today()
 
