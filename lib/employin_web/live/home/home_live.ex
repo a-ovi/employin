@@ -79,6 +79,11 @@ defmodule EmployinWeb.HomeLive do
     user_id = socket.assigns.user_id
 
     with {:ok, event} <- Events.create_event(user_id, attrs) do
+      event =
+        event
+        |> Events.preload_user()
+        |> extract_event_fields()
+
       Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
     end
 
@@ -171,6 +176,11 @@ defmodule EmployinWeb.HomeLive do
 
             for attrs <- [join_attrs, leave_attrs] do
               with {:ok, event} <- Events.create_event(user_id, attrs) do
+                event =
+                  event
+                  |> Events.preload_user()
+                  |> extract_event_fields()
+
                 Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
               end
             end
@@ -310,8 +320,6 @@ defmodule EmployinWeb.HomeLive do
     if events == [] or event_between_current_events?(event, events) do
       events =
         event
-        |> Events.preload_user()
-        |> extract_event_fields()
         |> List.wrap()
         |> Kernel.++(events)
         |> sort_events_by_time()
