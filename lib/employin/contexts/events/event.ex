@@ -16,6 +16,8 @@ defmodule Employin.Events.Event do
                   :"#{point}_#{component}"
                 end)
 
+  @all_fields [:tags] ++ @date_fields
+
   # Pre-filter by component
   @date_only_fields for point <- @time_points, do: :"#{point}_date"
   @hour_only_fields for point <- @time_points, do: :"#{point}_hour"
@@ -23,7 +25,7 @@ defmodule Employin.Events.Event do
   @period_only_fields for point <- @time_points, do: :"#{point}_period"
 
   # Define field types for the date-related fields. all are strings here
-  @date_field_types Map.from_keys(@date_fields, :string)
+  @all_field_types Map.from_keys(@all_fields, :string)
 
   @hours Enum.map(1..12, &Integer.to_string/1)
   @minutes Enum.map(0..59, &Integer.to_string/1)
@@ -47,8 +49,8 @@ defmodule Employin.Events.Event do
   end
 
   def form_changeset(params) do
-    {%{}, @date_field_types}
-    |> cast(params, @date_fields)
+    {%{}, @all_field_types}
+    |> cast(params, @all_fields)
     |> validate_required(@date_fields)
     |> validate_date(@date_only_fields)
     |> validate_hour(@hour_only_fields)
