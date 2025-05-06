@@ -78,14 +78,7 @@ defmodule EmployinWeb.HomeLive do
     attrs = %{"type" => type, "tags" => tags}
     user_id = socket.assigns.user_id
 
-    with {:ok, event} <- Events.create_event(user_id, attrs) do
-      event =
-        event
-        |> Events.preload_user()
-        |> extract_event_fields()
-
-      Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
-    end
+    create_event_and_broadcast_slimmed_event(user_id, attrs)
 
     socket =
       socket
@@ -175,14 +168,7 @@ defmodule EmployinWeb.HomeLive do
             leave_attrs = %{type: Event.left(), time: ending_dt}
 
             for attrs <- [join_attrs, leave_attrs] do
-              with {:ok, event} <- Events.create_event(user_id, attrs) do
-                event =
-                  event
-                  |> Events.preload_user()
-                  |> extract_event_fields()
-
-                Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
-              end
+              create_event_and_broadcast_slimmed_event(user_id, attrs)
             end
 
             socket =
@@ -341,5 +327,16 @@ defmodule EmployinWeb.HomeLive do
     dt
     |> DateTime.shift(minute: tz_offset)
     |> Date.to_iso8601()
+  end
+
+  defp create_event_and_broadcast_slimmed_event(user_id, attrs) do
+    with {:ok, event} <- Events.create_event(user_id, attrs) do
+      event =
+        event
+        |> Events.preload_user()
+        |> extract_event_fields()
+
+      Phoenix.PubSub.broadcast(Employin.PubSub, "events", {:new_event, event})
+    end
   end
 end
