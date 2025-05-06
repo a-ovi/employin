@@ -484,6 +484,18 @@
     <.error :for={msg <- Enum.map(@form[:overlap].errors, &translate_error(&1))}>
       {msg}
     </.error>
+    
+<!-- Location/Tags Section -->
+    <div class="mb-4 flex items-center">
+      <h4 class="font-bold mt-2 mr-2">Location: </h4>
+      <.input
+        type="select"
+        id="event-location-tag"
+        prompt="Select location"
+        field={@form[:tags]}
+        options={Enum.map([1, 2], &{Event.tag(&1), Event.tag(&1)})}
+      />
+    </div>
     <!-- action buttons -->
     <div class="mt-8 flex gap-x-2">
       <button

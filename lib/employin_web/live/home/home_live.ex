@@ -164,8 +164,8 @@ defmodule EmployinWeb.HomeLive do
         else
           if Events.can_insert?(socket.assigns.user_id, starting_dt, ending_dt) do
             user_id = socket.assigns.user_id
-            join_attrs = %{type: Event.joined(), time: starting_dt}
-            leave_attrs = %{type: Event.left(), time: ending_dt}
+            join_attrs = %{type: Event.joined(), time: starting_dt, tags: form_fields["tags"]}
+            leave_attrs = %{type: Event.left(), time: ending_dt, tags: form_fields["tags"]}
 
             for attrs <- [join_attrs, leave_attrs] do
               create_event_and_broadcast_slimmed_event(user_id, attrs)
