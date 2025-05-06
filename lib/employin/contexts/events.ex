@@ -68,6 +68,18 @@ defmodule Employin.Events do
     end
   end
 
+  def current_location(user_id) do
+    joined_type = Event.joined()
+
+    case get_last_event_by_user_id(user_id) do
+      %{type: ^joined_type, tags: tags} ->
+        tags || ""
+
+      _ ->
+        ""
+    end
+  end
+
   def preload_user(event) do
     Repo.preload(event, :user)
   end
