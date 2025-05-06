@@ -111,6 +111,15 @@ defmodule EmployinWeb.HomeLive do
   end
 
   @impl true
+  def handle_event("close_modal", _unsigned_params, socket) do
+    socket =
+      socket
+      |> assign(:show_event_modal, false)
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("validate-form", %{"date_form" => form_fields} = params, socket) do
     IO.inspect(params)
 
@@ -188,15 +197,6 @@ defmodule EmployinWeb.HomeLive do
           end
         end
     end
-  end
-
-  @impl true
-  def handle_event("close_modal", _unsigned_params, socket) do
-    socket =
-      socket
-      |> assign(:show_event_modal, false)
-
-    {:noreply, socket}
   end
 
   @impl true
