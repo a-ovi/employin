@@ -160,9 +160,14 @@
                   </div>
                   <!-- Activity and timestamp on second line -->
                   <div class="flex items-center justify-between mt-1 pl-5 w-full">
-                    <p class="text-sm text-gray-700">
-                      {if event.type == Event.joined(), do: "Started work", else: "Ended work"}
-                    </p>
+                    <div class="flex items-center gap-2">
+                      <p class="text-sm text-gray-700">
+                        {if event.type == Event.joined(), do: "Started work", else: "Ended work"}
+                      </p>
+                      <span :if={event.tags && String.trim(event.tags) != ""} class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-500">
+                        {event.tags}
+                      </span>
+                    </div>
                     <span class="text-xs sm:text-sm text-gray-500 ml-2 flex-shrink-0">
                       {format_time(event.time || event.inserted_at, @tz_offset)}
                     </span>
