@@ -2,6 +2,14 @@ let ScrollToBottom = {
   mounted() {
     this.scrollToBottom();
     this.isInBufferZone = false; // Track if user is in buffer zone
+    this.scrollButton = this.el.querySelector('#scroll-to-bottom-btn');
+
+    // Set up click handler for the scroll button
+    if (this.scrollButton) {
+      this.scrollButton.addEventListener('click', () => {
+        this.scrollToBottom();
+      });
+    }
 
     // Set up observer for new events
     this.observer = new MutationObserver(() => {
@@ -14,6 +22,9 @@ let ScrollToBottom = {
     // Track scrolling
     this.el.addEventListener('scroll', () => {
       this.isAtBottom = this.isScrolledToBottom();
+      
+      // Toggle scroll button visibility
+      this.toggleScrollButton();
 
       // Check if near top for buffer zone loading
       const currentlyInBufferZone = this.isNearTop();
@@ -31,6 +42,18 @@ let ScrollToBottom = {
     });
 
     this.isAtBottom = true;
+    this.toggleScrollButton(); // Initialize button state
+  },
+
+  // Add toggle function for the scroll button
+  toggleScrollButton() {
+    if (!this.scrollButton) return;
+    
+    if (this.isAtBottom) {
+      this.scrollButton.classList.add('hidden');
+    } else {
+      this.scrollButton.classList.remove('hidden');
+    }
   },
 
   beforeUpdate() {
@@ -71,6 +94,9 @@ let ScrollToBottom = {
     else if (this.isAtBottom) {
       this.scrollToBottom();
     }
+    
+    // Update button visibility after updates
+    this.toggleScrollButton();
   },
 
   destroyed() {
@@ -87,6 +113,9 @@ let ScrollToBottom = {
 
   scrollToBottom() {
     this.el.scrollTop = this.el.scrollHeight;
+    // Update state and button visibility
+    this.isAtBottom = true;
+    this.toggleScrollButton();
   },
 
   isScrolledToBottom() {
