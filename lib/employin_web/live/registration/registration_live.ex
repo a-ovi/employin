@@ -63,7 +63,6 @@ defmodule EmployinWeb.RegistrationLive do
   @impl true
   def handle_event("validate", %{"user" => user}, socket) do
     attrs = Map.take(user, ["display_name"])
-    IO.inspect(attrs, label: "->>>>>>>>>atrtrs")
     form =
       %User{}
       |> User.change_display_name(attrs)

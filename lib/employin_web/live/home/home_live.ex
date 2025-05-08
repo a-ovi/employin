@@ -118,9 +118,7 @@ defmodule EmployinWeb.HomeLive do
   end
 
   @impl true
-  def handle_event("validate-form", %{"date_form" => form_fields} = params, socket) do
-    IO.inspect(params)
-
+  def handle_event("validate-form", %{"date_form" => form_fields} = _params, socket) do
     form =
       form_fields
       |> Event.form_changeset()
@@ -129,8 +127,6 @@ defmodule EmployinWeb.HomeLive do
     socket =
       socket
       |> assign(form: form)
-
-    IO.inspect(form, label: "validate------------------------> ")
 
     {:noreply, socket}
   end
@@ -187,7 +183,6 @@ defmodule EmployinWeb.HomeLive do
               |> Map.put(:action, :validate)
 
             form = to_form(form_changeset, as: :date_form)
-            IO.inspect(form, label: "form->>>>>>>>>>>>>>>> ")
             socket = assign(socket, form: form)
             {:noreply, socket}
           end
@@ -257,8 +252,6 @@ defmodule EmployinWeb.HomeLive do
     {:ok, dt} = DateTime.new(date, time)
 
     result = DateTime.shift(dt, minute: -tz_offset)
-
-    if Mix.env() == :dev, do: IO.inspect(result, label: "#{prefix} date ->>>>>>")
 
     result
   end

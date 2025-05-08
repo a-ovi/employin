@@ -134,17 +134,7 @@ defmodule EmployinWeb.LoginLive do
   defp send_email(email, token, otp) do
     url = get_url(token, otp)
 
-    if Application.get_env(:employin, :env) == :prod do
-      MailNotifier.login_instructions(email, url, otp)
-    else
-      # In development, just log to terminal instead of sending email
-      IO.puts("\n=== DEVELOPMENT MODE: Email Not Sent ===")
-      IO.puts("To: #{email}")
-      IO.puts("URL: #{url}")
-      IO.puts("OTP: #{otp}")
-      IO.puts("=======================================\n")
-      {:ok, "success"}
-    end
+    MailNotifier.login_instructions(email, url, otp)
   end
 
   defp get_url(token, otp) do
