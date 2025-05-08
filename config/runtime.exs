@@ -114,28 +114,29 @@ if config_env() == :prod do
   #     config :swoosh, :api_client, Swoosh.ApiClient.Hackney
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+
+  # configuring mailer
+  smtp_relay = System.get_env("SMTP_ENDPOINT") |> to_charlist()
+  tls_options = [
+    verify: :verify_peer,
+    versions: [:"tlsv1.3"],
+    middlebox_comp_mode: false,
+    server_name_indication: smtp_relay,
+    depth: 99,
+    cacerts: :public_key.cacerts_get(),
+    log_level: :debug
+  ]
+
+  config :employin, Employin.Mailer,
+    adapter: Swoosh.Adapters.SMTP,
+    relay: System.get_env("SMTP_ENDPOINT"),
+    username: System.get_env("SMTP_USERNAME"),
+    password: System.get_env("SMTP_PASSWORD"),
+    port: String.to_integer(System.get_env("SMTP_PORT") || "587"),
+    ssl: false,
+    tls: :always,
+    auth: :always,
+    tls_options: tls_options,
+    retries: 2
+
 end
-
-# configuring mailer
-smtp_relay = System.get_env("SMTP_ENDPOINT") |> to_charlist()
-tls_options = [
-  verify: :verify_peer,
-  versions: [:"tlsv1.3"],
-  middlebox_comp_mode: false,
-  server_name_indication: smtp_relay,
-  depth: 99,
-  cacerts: :public_key.cacerts_get(),
-  log_level: :debug
-]
-
-config :employin, Employin.Mailer,
-  adapter: Swoosh.Adapters.SMTP,
-  relay: System.get_env("SMTP_ENDPOINT"),
-  username: System.get_env("SMTP_USERNAME"),
-  password: System.get_env("SMTP_PASSWORD"),
-  port: String.to_integer(System.get_env("SMTP_PORT") || "587"),
-  ssl: false,
-  tls: :always,
-  auth: :always,
-  tls_options: tls_options,
-  retries: 2
