@@ -2,8 +2,8 @@ defmodule Employin.LoginToken do
 
   @default_otp_len 6
   @max_age 5*60
-  @secret_name "JWT_SECRET"
-  @salt_name "JWT_SALT"
+  @secret_name "TOKEN_SECRET"
+  @salt_name "TOKEN_SALT"
 
   def create_otp_and_token(data) do
     otp = create_otp()
