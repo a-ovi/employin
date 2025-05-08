@@ -47,6 +47,7 @@ defmodule EmployinWeb.HomeLive do
     socket =
       socket
       |> assign(:events, events)
+      |> assign(:more_events?, length(events) == @per_page)
       |> assign(:events_loader, AsyncResult.ok(events_loader, "ok"))
 
     {:noreply, socket}
