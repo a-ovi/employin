@@ -48,8 +48,20 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST") || "example.com"
+  host = System.get_env("PHX_HOST") || "localhost"
   port = String.to_integer(System.get_env("PORT") || "4000")
+
+  origins =
+    case System.get_env("ORIGINS") do
+      nil ->
+        true
+
+      "false" ->
+        false
+
+      origins_string ->
+        String.split(origins_string, ",") |> Enum.map(&String.trim/1)
+    end
 
   config :employin, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
@@ -63,6 +75,7 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: port
     ],
+    check_origin: origins,
     secret_key_base: secret_key_base
 
   # ## SSL Support
@@ -117,6 +130,7 @@ if config_env() == :prod do
 
   # configuring mailer
   smtp_relay = System.get_env("SMTP_ENDPOINT") |> to_charlist()
+
   tls_options = [
     verify: :verify_peer,
     versions: [:"tlsv1.3"],
@@ -138,5 +152,4 @@ if config_env() == :prod do
     auth: :always,
     tls_options: tls_options,
     retries: 2
-
 end
