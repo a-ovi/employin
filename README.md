@@ -7,6 +7,7 @@ Employin is a simple web application for companies to track when users enter or 
 - One-click "Join" (arrival) and "Leave" (departure) tracking
 - Add past time points
 - Activity log displayed on the home page
+- Magic Link login and registration
 - Restrict registration to specific email domains (optional)
 
 ## Tech Stack
