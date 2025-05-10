@@ -2,6 +2,14 @@
 
 Employin is a simple web application for companies to track when users enter or leave their workplace. Users can easily record their arrival and departure with a single click, and can also add past time points. All activity is displayed on the home page for easy review.
 
+## Demo
+
+<div align="center">
+  <img src="docs/images/home.png" width="32%" alt="Home Page" />
+  <img src="docs/images/modal.png" width="32%" alt="Time Entry Form" /> 
+  <img src="docs/images/login.png" width="32%" alt="otp submit page" />
+</div>
+
 ## Features
 
 - One-click "Join" (arrival) and "Leave" (departure) tracking
