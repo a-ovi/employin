@@ -1,7 +1,8 @@
 defmodule EmployinWeb.HomeLive do
   @moduledoc """
   The main page. It has a real-time activity log of every user's events and a
-  status card to start or end work. A modal adds past work sessions.
+  status card to start or end work. A modal adds past work sessions, or edits
+  and deletes the user's own sessions.
 
   Business rules live in `Employin.Events`. The log is a LiveView stream
   managed by `EmployinWeb.HomeLive.ActivityLog`, paginated with keyset
@@ -31,7 +32,7 @@ defmodule EmployinWeb.HomeLive do
       |> assign(:time_zone, time_zone(socket))
       |> ActivityLog.init()
       |> assign(:more_events?, true)
-      |> assign(:show_session_modal, false)
+      |> assign(:session_modal, nil)
       |> assign_status(last_event)
       |> assign(:events_loader, AsyncResult.loading())
       |> start_async(:load_events, fn -> Events.list_events(limit: @per_page) end)
@@ -71,44 +72,80 @@ defmodule EmployinWeb.HomeLive do
   def handle_event("show-session-modal", _params, socket) do
     today = local_today(socket)
 
-    defaults = %{
+    params = %{
       "starting_date" => today,
       "ending_date" => today,
       "tags" => socket.assigns.last_location
     }
 
-    form =
-      defaults
-      |> Event.session_form_changeset(socket.assigns.time_zone)
-      |> to_form(as: :session)
+    {:noreply, open_session_modal(socket, %{mode: :new, running?: false}, params)}
+  end
 
-    {:noreply, assign(socket, show_session_modal: true, session_form: form)}
+  def handle_event("edit-session", %{"id" => event_id}, socket) do
+    %{current_user: user, time_zone: time_zone} = socket.assigns
+
+    case Events.get_work_session(user.id, event_id) do
+      {:ok, %{joined: joined, left: left}} ->
+        modal = %{mode: :edit, event_id: joined.id, running?: is_nil(left)}
+        params = Event.session_form_params(joined, left, time_zone)
+        {:noreply, open_session_modal(socket, modal, params)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "That session can't be edited.")}
+    end
   end
 
   def handle_event("close-session-modal", _params, socket) do
-    {:noreply, assign(socket, :show_session_modal, false)}
+    {:noreply, assign(socket, :session_modal, nil)}
   end
 
   def handle_event("validate-session", %{"session" => params}, socket) do
     form =
       params
-      |> Event.session_form_changeset(socket.assigns.time_zone)
+      |> session_changeset(socket)
       |> to_form(as: :session, action: :validate)
 
     {:noreply, assign(socket, :session_form, form)}
   end
 
   def handle_event("save-session", %{"session" => params}, socket) do
-    %{current_user: user, time_zone: time_zone} = socket.assigns
+    %{current_user: user, time_zone: time_zone, session_modal: modal} = socket.assigns
+    opts = [running?: modal.running?]
 
-    case Event.apply_session_form(params, time_zone) do
+    case Event.apply_session_form(params, time_zone, DateTime.utc_now(), opts) do
       {:ok, session} ->
-        user.id
-        |> Events.create_work_session(session.starting, session.ending, session.tags)
-        |> handle_session_result(params, socket)
+        result =
+          case modal.mode do
+            :new ->
+              Events.create_work_session(user.id, session.starting, session.ending, session.tags)
+
+            :edit ->
+              Events.update_work_session(
+                user.id,
+                modal.event_id,
+                session.starting,
+                session.ending,
+                session.tags
+              )
+          end
+
+        handle_session_result(result, params, socket)
 
       {:error, changeset} ->
         {:noreply, assign(socket, :session_form, to_form(changeset, as: :session))}
+    end
+  end
+
+  def handle_event("delete-session", _params, socket) do
+    %{current_user: user, session_modal: %{mode: :edit, event_id: event_id}} = socket.assigns
+
+    case Events.delete_work_session(user.id, event_id) do
+      :ok ->
+        {:noreply,
+         socket |> assign(:session_modal, nil) |> put_flash(:info, "Work session deleted.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Couldn't delete the session. Please try again.")}
     end
   end
 
@@ -147,19 +184,40 @@ defmodule EmployinWeb.HomeLive do
     {:noreply, add_events(socket, events)}
   end
 
+  def handle_info({:events_changed, user_id}, socket) do
+    socket =
+      if user_id == socket.assigns.current_user.id,
+        do: assign_status(socket, Events.last_event(user_id)),
+        else: socket
+
+    {:noreply, reload_log(socket, [])}
+  end
+
   ## Helpers
 
+  defp open_session_modal(socket, modal, params) do
+    socket = assign(socket, :session_modal, modal)
+    assign(socket, :session_form, params |> session_changeset(socket) |> to_form(as: :session))
+  end
+
+  defp session_changeset(params, socket) do
+    %{time_zone: time_zone, session_modal: modal} = socket.assigns
+    Event.session_form_changeset(params, time_zone, DateTime.utc_now(), running?: modal.running?)
+  end
+
   defp handle_session_result({:ok, _events}, _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:show_session_modal, false)
-     |> put_flash(:info, "Work session added.")}
+    message =
+      if socket.assigns.session_modal.mode == :edit,
+        do: "Work session updated.",
+        else: "Work session added."
+
+    {:noreply, socket |> assign(:session_modal, nil) |> put_flash(:info, message)}
   end
 
   defp handle_session_result({:error, :overlap}, params, socket) do
     form =
       params
-      |> Event.session_form_changeset(socket.assigns.time_zone)
+      |> session_changeset(socket)
       |> Ecto.Changeset.add_error(:base, "This session overlaps with your existing events.")
       |> to_form(as: :session, action: :validate)
 

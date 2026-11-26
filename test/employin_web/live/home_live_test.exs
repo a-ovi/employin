@@ -106,6 +106,69 @@ defmodule EmployinWeb.HomeLiveTest do
       assert html =~ "overlaps with your existing events"
     end
 
+    test "edits and deletes the user's own sessions", %{conn: conn, user: user} do
+      other = user_fixture(%{display_name: "Other Person"})
+      theirs = event_fixture(other, "joined", minutes_from_now(-500))
+
+      {:ok, [joined, left]} =
+        Events.create_work_session(user.id, minutes_from_now(-300), minutes_from_now(-240))
+
+      {:ok, lv, _html} = live(conn, ~p"/")
+      render_async(lv)
+
+      # Only own events have an edit button.
+      assert has_element?(lv, "#event-#{left.id} button[phx-click=edit-session]")
+      refute has_element?(lv, "#event-#{theirs.id} button[phx-click=edit-session]")
+
+      lv |> element("#event-#{left.id} button[phx-click=edit-session]") |> render_click()
+      assert render(lv) =~ "Edit work session"
+
+      local = fn dt ->
+        {DateTime.to_date(dt) |> Date.to_iso8601(), Calendar.strftime(dt, "%H:%M")}
+      end
+
+      {start_date, start_time} = local.(joined.time)
+      assert has_element?(lv, "#session_starting_date[value='#{start_date}']")
+      assert has_element?(lv, "#session_starting_time[value='#{start_time}']")
+
+      new_end = DateTime.add(left.time, 30, :minute)
+      {end_date, end_time} = local.(new_end)
+
+      lv
+      |> form("#session-form",
+        session: %{ending_date: end_date, ending_time: end_time, tags: "On-site"}
+      )
+      |> render_submit()
+
+      assert render(lv) =~ "Work session updated."
+      # The form has minute precision.
+      expected_end = %{new_end | second: 0}
+      assert %{time: ^expected_end, tags: "On-site"} = Events.last_event(user.id)
+
+      # The log was re-rendered with the moved event.
+      assert lv |> log_html() |> event_ids() == [theirs.id, joined.id, left.id]
+
+      lv |> element("#event-#{joined.id} button[phx-click=edit-session]") |> render_click()
+      lv |> element("#delete-session-btn") |> render_click()
+
+      assert render(lv) =~ "Work session deleted."
+      assert lv |> log_html() |> event_ids() == [theirs.id]
+    end
+
+    test "edits the running session from the log", %{conn: conn, user: user} do
+      running = event_fixture(user, "joined", minutes_from_now(-30), "Remote")
+
+      {:ok, lv, _html} = live(conn, ~p"/")
+      render_async(lv)
+
+      lv |> element("#event-#{running.id} button[phx-click=edit-session]") |> render_click()
+      assert render(lv) =~ "This session is still running"
+      refute has_element?(lv, "#session_ending_time")
+
+      lv |> element("#delete-session-btn") |> render_click()
+      assert render(lv) =~ "Not Working"
+    end
+
     test "loads older events on demand, in order, with one divider per day", %{
       conn: conn,
       user: user

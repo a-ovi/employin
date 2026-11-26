@@ -101,6 +101,140 @@ defmodule Employin.EventsTest do
     end
   end
 
+  describe "get_work_session/2" do
+    test "finds the pair from either event, and the running session", %{user: user} do
+      joined = event_fixture(user, "joined", minutes_from_now(-120))
+      left = event_fixture(user, "left", minutes_from_now(-60))
+      running = event_fixture(user, "joined", minutes_from_now(-10))
+
+      assert {:ok, %{joined: %{id: j}, left: %{id: l}}} =
+               Events.get_work_session(user.id, left.id)
+
+      assert {j, l} == {joined.id, left.id}
+      assert {:ok, %{joined: %{id: ^j}}} = Events.get_work_session(user.id, joined.id)
+
+      running_id = running.id
+
+      assert {:ok, %{joined: %{id: ^running_id}, left: nil}} =
+               Events.get_work_session(user.id, running.id)
+    end
+
+    test "only finds the user's own sessions", %{user: user} do
+      other = event_fixture(user_fixture(), "joined", minutes_from_now(-10))
+
+      assert {:error, :not_found} = Events.get_work_session(user.id, other.id)
+      assert {:error, :not_found} = Events.get_work_session(user.id, "not-a-uuid")
+    end
+  end
+
+  describe "update_work_session/5" do
+    setup %{user: user} do
+      {:ok, [joined, left]} =
+        Events.create_work_session(user.id, minutes_from_now(-300), minutes_from_now(-240))
+
+      %{joined: joined, left: left}
+    end
+
+    test "moves both events and changes the location", %{user: user, left: left} do
+      starting = minutes_from_now(-280)
+      ending = minutes_from_now(-200)
+
+      assert {:ok, %{joined: joined, left: updated}} =
+               Events.update_work_session(user.id, left.id, starting, ending, "On-site")
+
+      assert {joined.time, updated.time, joined.tags, updated.tags} ==
+               {starting, ending, "On-site", "On-site"}
+    end
+
+    test "may overlap only its own old range", %{user: user, joined: joined} do
+      event_fixture(user, "joined", minutes_from_now(-100))
+      event_fixture(user, "left", minutes_from_now(-90))
+
+      # Extending into the next session is rejected ...
+      assert {:error, :overlap} =
+               Events.update_work_session(
+                 user.id,
+                 joined.id,
+                 minutes_from_now(-300),
+                 minutes_from_now(-95),
+                 "Remote"
+               )
+
+      # ... but overlapping the session's own previous times is fine.
+      assert {:ok, _} =
+               Events.update_work_session(
+                 user.id,
+                 joined.id,
+                 minutes_from_now(-250),
+                 minutes_from_now(-150),
+                 "Remote"
+               )
+    end
+
+    test "edits the start of the running session", %{user: user} do
+      running = event_fixture(user, "joined", minutes_from_now(-30))
+      new_start = minutes_from_now(-45)
+
+      assert {:ok, %{joined: %{time: ^new_start}, left: nil}} =
+               Events.update_work_session(user.id, running.id, new_start, nil, "Remote")
+
+      # A running session can't be given an end, and can't start before the last session ended.
+      assert {:error, :invalid} =
+               Events.update_work_session(
+                 user.id,
+                 running.id,
+                 new_start,
+                 minutes_from_now(-1),
+                 "Remote"
+               )
+
+      assert {:error, :overlap} =
+               Events.update_work_session(user.id, running.id, minutes_from_now(-260), nil, nil)
+    end
+
+    test "broadcasts a change", %{user: user, joined: joined} do
+      Events.subscribe()
+      user_id = user.id
+
+      {:ok, _} =
+        Events.update_work_session(
+          user.id,
+          joined.id,
+          minutes_from_now(-310),
+          minutes_from_now(-250),
+          nil
+        )
+
+      assert_receive {:events_changed, ^user_id}
+    end
+  end
+
+  describe "delete_work_session/2" do
+    test "deletes both events of a session", %{user: user} do
+      {:ok, [joined, _left]} =
+        Events.create_work_session(user.id, minutes_from_now(-300), minutes_from_now(-240))
+
+      assert :ok = Events.delete_work_session(user.id, joined.id)
+      assert Events.list_events() == []
+    end
+
+    test "cancels the running session", %{user: user} do
+      event_fixture(user, "joined", minutes_from_now(-300))
+      event_fixture(user, "left", minutes_from_now(-200))
+      running = event_fixture(user, "joined", minutes_from_now(-10))
+
+      assert :ok = Events.delete_work_session(user.id, running.id)
+      assert Events.current_status(Events.last_event(user.id)) == "left"
+    end
+
+    test "can't delete someone else's session", %{user: user} do
+      other = event_fixture(user_fixture(), "joined", minutes_from_now(-10))
+
+      assert {:error, :not_found} = Events.delete_work_session(user.id, other.id)
+      assert [_] = Events.list_events()
+    end
+  end
+
   describe "list_events/1" do
     test "returns events oldest-first with keyset pagination", %{user: user} do
       events =
