@@ -46,6 +46,7 @@ can't be replayed in another.
 | `:otp`          | email   | 5 min    | Signing key is `secret <> otp`, so the token verifies only with the emailed code |
 | `:registration` | email   | 10 min   | Proves the email was verified; carried to the profile setup page |
 | `:session`      | user id | 60 s     | Hands a new user from the LiveView to the controller to set the cookie |
+| `:pending`      | email, OTP token, sent-at | 5 min | **Encrypted** state of the OTP step, kept in the login URL (`/login?s=…`) so a refresh keeps the user on that step |
 
 ```mermaid
 sequenceDiagram
@@ -80,8 +81,11 @@ and in `on_mount` for LiveViews, so a deleted user can no longer use the app.
 Logout is a `DELETE` request. It clears the session and broadcasts `disconnect`
 to the user's open LiveViews.
 
-The LiveView throttles resending the OTP (`@resend_cooldown`). The JS countdown
-only reflects that cooldown in the UI.
+`LoginLive.handle_params/3` alone decides which step to show: no `s` param
+means the email step, and a valid `:pending` token means the OTP step. Sending or
+resending a code `push_patch`es a fresh token. The resend cooldown
+(`@resend_cooldown`) is measured from the token's sent-at time, so the server
+still enforces it after a refresh, and the JS countdown resumes where it was.
 
 ## Events
 
@@ -92,6 +96,9 @@ whether the user is working.
 - **Quick toggle**: `Events.toggle_status/2` reads the latest event and inserts
   the opposite type at "now". A new session uses the selected location. Ending
   a session keeps the running session's location.
+- **Locations**: every session has one. `Event.changeset/2` gives a `joined`
+  event without a location `Event.default_tag/0` (Remote). The UI selects have
+  no empty option and pre-select the user's last used location.
 - **Past sessions**: `Events.create_work_session/4` inserts a `joined`/`left`
   pair after `slot_available?/3` checks three things:
   - no events of the user fall inside the range,
