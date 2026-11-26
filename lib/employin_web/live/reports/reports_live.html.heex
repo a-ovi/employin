@@ -1,0 +1,136 @@
+<div class="flex min-h-dvh flex-col">
+  <Layouts.app_header current_user={@current_user} active={:reports} />
+
+  <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
+    <section class="rounded-lg bg-white shadow">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-3 py-3 sm:px-6">
+        <div class="flex items-center gap-2">
+          <.link
+            patch={period_path(@period, shift(@period, @anchor, -1))}
+            class="rounded-md p-1.5 text-gray-600 hover:bg-gray-100"
+            aria-label="Previous period"
+          >
+            <.icon name="hero-chevron-left" class="h-5 w-5" />
+          </.link>
+          <h2
+            id="report-range"
+            class="min-w-[11rem] text-center text-base font-medium text-gray-800 sm:text-lg"
+          >
+            {range_label(@period, @first, @last)}
+          </h2>
+          <.link
+            patch={period_path(@period, shift(@period, @anchor, 1))}
+            class="rounded-md p-1.5 text-gray-600 hover:bg-gray-100"
+            aria-label="Next period"
+          >
+            <.icon name="hero-chevron-right" class="h-5 w-5" />
+          </.link>
+        </div>
+
+        <div class="flex items-center gap-2 text-sm">
+          <div
+            class="flex rounded-md border border-gray-300 p-0.5"
+            role="group"
+            aria-label="Period"
+          >
+            <.link
+              :for={{period, label} <- [week: "Week", month: "Month"]}
+              patch={period_path(period, @anchor)}
+              aria-current={@period == period && "true"}
+              class={[
+                "rounded px-3 py-1 font-medium",
+                if(@period == period,
+                  do: "bg-indigo-600 text-white",
+                  else: "text-gray-600 hover:bg-gray-100"
+                )
+              ]}
+            >
+              {label}
+            </.link>
+          </div>
+          <a
+            id="export-csv"
+            href={csv_path(@first, @last, @time_zone)}
+            class="flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <.icon name="hero-arrow-down-tray" class="h-4 w-4" /> CSV
+          </a>
+        </div>
+      </div>
+
+      <div :if={!@report} class="flex items-center justify-center gap-3 py-16 text-gray-500">
+        <.spinner class="h-6 w-6 text-blue-500" /> Loading report...
+      </div>
+
+      <%!-- Wide month tables scroll inside the card; the first column stays visible. --%>
+      <div :if={@report} class="overflow-x-auto">
+        <table id="report-table" class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-gray-200 bg-gray-50 text-gray-600">
+              <th class="sticky left-0 z-10 bg-gray-50 px-3 py-2 text-left font-medium sm:px-6">
+                Person
+              </th>
+              <th
+                :for={date <- @report.dates}
+                class="whitespace-nowrap px-2 py-2 text-center font-medium"
+              >
+                <div class="text-xs text-gray-400">{Calendar.strftime(date, "%a")}</div>
+                <div>{date.day}</div>
+              </th>
+              <th class="sticky right-0 z-10 bg-gray-50 px-3 py-2 text-right font-semibold text-gray-800 sm:px-6">
+                Total
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr
+              :for={row <- @report.rows}
+              id={"report-row-#{row.user.id}"}
+            >
+              <td class="sticky left-0 z-10 max-w-[10rem] truncate bg-white px-3 py-2 font-medium text-gray-900 sm:px-6">
+                {row.user.display_name}
+              </td>
+              <td
+                :for={date <- @report.dates}
+                class={[
+                  "whitespace-nowrap px-2 py-2 text-center tabular-nums",
+                  if(Map.get(row.seconds_by_date, date, 0) > 0,
+                    do: "text-gray-800",
+                    else: "text-gray-300"
+                  )
+                ]}
+              >
+                {format_duration(Map.get(row.seconds_by_date, date, 0))}
+              </td>
+              <td class="sticky right-0 z-10 bg-white px-3 py-2 text-right font-semibold tabular-nums text-gray-900 sm:px-6">
+                {format_duration(row.total_seconds)}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="border-t-2 border-gray-200 bg-gray-50">
+              <td class="sticky left-0 z-10 bg-gray-50 px-3 py-2 font-semibold sm:px-6">All</td>
+              <td
+                :for={date <- @report.dates}
+                class="px-2 py-2 text-center tabular-nums text-gray-600"
+              >
+                {@report.rows
+                |> Enum.map(&Map.get(&1.seconds_by_date, date, 0))
+                |> Enum.sum()
+                |> format_duration()}
+              </td>
+              <td class="sticky right-0 z-10 bg-gray-50 px-3 py-2 text-right font-semibold tabular-nums sm:px-6">
+                {format_duration(@report.total_seconds)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+        <p :if={@report.rows == []} class="py-12 text-center text-gray-500">No users yet.</p>
+      </div>
+
+      <p class="border-t border-gray-100 px-3 py-2 text-xs text-gray-500 sm:px-6">
+        Hours as h:mm in {@time_zone}. Sessions are split at midnight; a running session counts until now.
+      </p>
+    </section>
+  </main>
+</div>

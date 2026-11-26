@@ -29,6 +29,8 @@ defmodule Employin.Events.Event do
   }
   @session_required [:starting_date, :starting_time, :ending_date, :ending_time]
 
+  @type t :: %__MODULE__{}
+
   schema "events" do
     field :type, :string
     field :time, :utc_datetime

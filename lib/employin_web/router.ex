@@ -32,7 +32,10 @@ defmodule EmployinWeb.Router do
 
     live_session :authenticated, on_mount: [{EmployinWeb.UserAuth, :ensure_authenticated}] do
       live "/", HomeLive
+      live "/reports", ReportsLive
     end
+
+    get "/reports/export.csv", ReportController, :export
 
     delete "/logout", SessionController, :logout
   end
