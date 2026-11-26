@@ -27,6 +27,24 @@ defmodule EmployinWeb.SessionControllerTest do
       refute get_session(conn, :user_id)
     end
 
+    test "a login link works only once", %{conn: conn} do
+      user = user_fixture()
+      %{token: token, otp: otp} = LoginToken.create_otp_and_token(user.email)
+      link = ~p"/login/verify?token=#{token}&otp=#{otp}"
+
+      assert redirected_to(get(conn, link)) == ~p"/"
+      assert html_response(get(build_conn(), link), 401) =~ "Link Already Used"
+    end
+
+    test "stops accepting guesses for a token", %{conn: conn} do
+      %{token: token, otp: otp} = LoginToken.create_otp_and_token("a@example.com")
+
+      for _ <- 1..5, do: get(build_conn(), ~p"/login/verify?token=#{token}&otp=000000x")
+
+      assert html_response(get(conn, ~p"/login/verify?token=#{token}&otp=#{otp}"), 401) =~
+               "Too Many Attempts"
+    end
+
     test "rejects a wrong code", %{conn: conn} do
       %{token: token} = LoginToken.create_otp_and_token("a@example.com")
 

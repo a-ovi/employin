@@ -18,6 +18,7 @@ defmodule EmployinWeb.LoginLive do
 
   import EmployinWeb.AuthComponents
 
+  alias Employin.Auth
   alias Employin.LoginToken
   alias Employin.MailNotifier
   alias Employin.Users.User
@@ -90,13 +91,15 @@ defmodule EmployinWeb.LoginLive do
   end
 
   def handle_event("submit-otp", %{"otp" => otp}, socket) do
-    case LoginToken.verify_otp(socket.assigns.token, otp) do
+    case Auth.verify_code(socket.assigns.token, otp) do
       {:ok, _email} ->
         {:noreply, assign(socket, trigger_submit: true)}
 
+      {:error, {:rate_limited, _}} ->
+        {:noreply, assign_otp_error(socket, "too many attempts, please request a new code")}
+
       {:error, _} ->
-        form = to_form(%{"otp" => ""}, errors: [otp: {"invalid or expired code", []}])
-        {:noreply, assign(socket, otp_form: form)}
+        {:noreply, assign_otp_error(socket, "invalid or expired code")}
     end
   end
 
@@ -130,8 +133,27 @@ defmodule EmployinWeb.LoginLive do
     |> assign(:otp_form, to_form(%{"otp" => ""}))
   end
 
+  defp assign_otp_error(socket, message) do
+    assign(socket, otp_form: to_form(%{"otp" => ""}, errors: [otp: {message, []}]))
+  end
+
   defp deliver_otp(socket, email, success_msg, error_msg) do
-    %{token: token, otp: otp} = LoginToken.create_otp_and_token(email)
+    case Auth.request_code(email) do
+      {:ok, code} ->
+        send_code(socket, email, code, success_msg, error_msg)
+
+      {:error, {:rate_limited, retry_after_ms}} ->
+        minutes = max(div(retry_after_ms, 60_000), 1)
+
+        put_flash(
+          socket,
+          :error,
+          "Too many codes requested for this address. Try again in #{minutes} min."
+        )
+    end
+  end
+
+  defp send_code(socket, email, %{token: token, otp: otp}, success_msg, error_msg) do
     url = url(~p"/login/verify?token=#{token}&otp=#{otp}")
 
     socket =

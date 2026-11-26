@@ -12,6 +12,7 @@ defmodule Employin.Application do
       Employin.Repo,
       {DNSCluster, query: Application.get_env(:employin, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Employin.PubSub},
+      {Employin.RateLimit, clean_period: :timer.minutes(1)},
       # Start the Finch HTTP client for sending emails
       {Finch, name: Employin.Finch},
       # Start a worker by calling: Employin.Worker.start_link(arg)

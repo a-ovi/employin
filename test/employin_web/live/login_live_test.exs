@@ -95,6 +95,18 @@ defmodule EmployinWeb.LoginLiveTest do
     assert render(lv) =~ "Sign in to your account"
   end
 
+  test "limits how many codes an address can request", %{conn: conn} do
+    email = unique_email()
+    for _ <- 1..5, do: {:ok, _} = Employin.Auth.request_code(email)
+
+    {:ok, lv, _html} = live(conn, ~p"/login")
+    html = lv |> form("#email-form", user: %{email: email}) |> render_submit()
+
+    assert html =~ "Too many codes requested for this address"
+    assert html =~ "Sign in to your account"
+    refute_email_sent()
+  end
+
   test "throttles resending the OTP", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/login")
     lv |> form("#email-form", user: %{email: "jane@example.com"}) |> render_submit()

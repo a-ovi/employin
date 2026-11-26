@@ -9,13 +9,28 @@ defmodule EmployinWeb.SessionController do
   """
   use EmployinWeb, :controller
 
+  alias Employin.Auth
   alias Employin.LoginToken
   alias Employin.Users
 
   def otp_check(conn, %{"token" => token, "otp" => otp}) do
-    case LoginToken.verify_otp(token, otp) do
+    case Auth.consume_code(token, otp) do
       {:ok, email} ->
         login_or_register(conn, email)
+
+      {:error, :used} ->
+        unauthorized(
+          conn,
+          "Link Already Used",
+          "This login link has already been used. Please request a new one."
+        )
+
+      {:error, {:rate_limited, _}} ->
+        unauthorized(
+          conn,
+          "Too Many Attempts",
+          "Too many attempts with this code. Please request a new one."
+        )
 
       {:error, _} ->
         unauthorized(
@@ -31,7 +46,7 @@ defmodule EmployinWeb.SessionController do
   end
 
   def login(conn, %{"token" => token}) do
-    with {:ok, user_id} <- LoginToken.verify(:session, token),
+    with {:ok, user_id} <- Auth.consume_session_token(token),
          %{} = user <- Users.get(user_id) do
       login_user(conn, user.id, "Welcome to Employin!")
     else
