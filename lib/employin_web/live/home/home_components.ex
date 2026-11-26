@@ -10,32 +10,6 @@ defmodule EmployinWeb.HomeComponents do
 
   alias Employin.Events.Event
 
-  ## Layout
-
-  attr :current_user, :map, required: true
-
-  def app_header(assigns) do
-    ~H"""
-    <header class="shrink-0 bg-white shadow">
-      <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <h1 class="text-xl font-bold text-gray-800 sm:text-2xl">Employin</h1>
-        <div class="flex items-center gap-4">
-          <span class="hidden text-sm text-gray-600 sm:inline">{@current_user.display_name}</span>
-          <.link
-            href={~p"/logout"}
-            method="delete"
-            class="flex items-center gap-1 font-medium text-gray-600 hover:text-gray-900"
-            aria-label="Log out"
-          >
-            <.icon name="hero-arrow-right-start-on-rectangle" class="h-5 w-5" />
-            <span class="hidden sm:inline">Logout</span>
-          </.link>
-        </div>
-      </div>
-    </header>
-    """
-  end
-
   ## Activity log
 
   attr :log, :any, required: true, doc: "the `@streams.log` stream"

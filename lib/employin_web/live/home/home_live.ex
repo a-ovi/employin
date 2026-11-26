@@ -16,6 +16,7 @@ defmodule EmployinWeb.HomeLive do
   alias Employin.Events.Event
   alias Employin.TimeZones
   alias EmployinWeb.HomeLive.ActivityLog
+  alias EmployinWeb.Layouts
   alias Phoenix.LiveView.AsyncResult
 
   @per_page 30

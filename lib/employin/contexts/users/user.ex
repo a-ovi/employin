@@ -13,6 +13,8 @@ defmodule Employin.Users.User do
   @max_display_name_length 25
   @email_regex ~r/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 
+  @type t :: %__MODULE__{}
+
   schema "users" do
     field :display_name, :string
     field :email, :string

@@ -69,7 +69,8 @@ defmodule Employin.MixProject do
       {:uniq, "~> 0.7"},
       {:gen_smtp, "~> 1.1"},
       {:hammer, "~> 7.0"},
-      {:tz, "~> 0.28"}
+      {:tz, "~> 0.28"},
+      {:nimble_csv, "~> 1.2"}
     ]
   end
 
