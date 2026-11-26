@@ -56,33 +56,77 @@ defmodule Employin.Events.Event do
   end
 
   @doc """
-  Changeset for the past-session form. `time_zone` is the viewer's IANA zone
-  (e.g. `"Asia/Dhaka"`) and `now` is injectable for tests.
+  Changeset for the work-session form (add or edit). `time_zone` is the
+  viewer's IANA zone (e.g. `"Asia/Dhaka"`) and `now` is injectable for tests.
+
+  With `running?: true` (editing the session in progress) only the start is
+  collected, and it must not be in the future.
   """
-  def session_form_changeset(params, time_zone \\ "Etc/UTC", now \\ DateTime.utc_now()) do
+  def session_form_changeset(
+        params,
+        time_zone \\ "Etc/UTC",
+        now \\ DateTime.utc_now(),
+        opts \\ []
+      ) do
+    running? = Keyword.get(opts, :running?, false)
+    required = if running?, do: [:starting_date, :starting_time], else: @session_required
+
     {%{}, @session_types}
     |> cast(params, Map.keys(@session_types))
-    |> validate_required(@session_required)
+    |> validate_required(required)
     |> validate_tags()
-    |> validate_session_range(time_zone, now)
+    |> validate_session_range(time_zone, now, running?)
   end
 
   @doc """
-  Validates the session form and returns the UTC range on success.
+  Validates the session form and returns the UTC range on success
+  (`ending` is `nil` with `running?: true`).
   """
-  def apply_session_form(params, time_zone, now \\ DateTime.utc_now()) do
-    changeset = session_form_changeset(params, time_zone, now)
+  def apply_session_form(params, time_zone, now \\ DateTime.utc_now(), opts \\ []) do
+    changeset = session_form_changeset(params, time_zone, now, opts)
 
     with {:ok, _} <- apply_action(changeset, :validate) do
-      {starting, ending} = utc_range(changeset, time_zone)
-      {:ok, %{starting: starting, ending: ending, tags: get_field(changeset, :tags)}}
+      {:ok,
+       %{
+         starting: local_field_to_utc(changeset, :starting, time_zone),
+         ending: unless(opts[:running?], do: local_field_to_utc(changeset, :ending, time_zone)),
+         tags: get_field(changeset, :tags)
+       }}
     end
   end
 
-  defp validate_session_range(%{valid?: false} = changeset, _time_zone, _now), do: changeset
+  @doc "Form params (local date/time strings) for an existing session."
+  def session_form_params(%__MODULE__{} = joined, left, time_zone) do
+    %{"tags" => joined.tags}
+    |> Map.merge(local_params(:starting, joined.time, time_zone))
+    |> Map.merge(if left, do: local_params(:ending, left.time, time_zone), else: %{})
+  end
 
-  defp validate_session_range(changeset, time_zone, now) do
-    {starting, ending} = utc_range(changeset, time_zone)
+  defp local_params(prefix, utc, time_zone) do
+    local = TimeZones.to_local(utc, time_zone)
+
+    %{
+      "#{prefix}_date" => local |> DateTime.to_date() |> Date.to_iso8601(),
+      "#{prefix}_time" => local |> DateTime.to_time() |> Calendar.strftime("%H:%M")
+    }
+  end
+
+  defp validate_session_range(%{valid?: false} = changeset, _time_zone, _now, _running?),
+    do: changeset
+
+  defp validate_session_range(changeset, time_zone, now, true = _running?) do
+    starting = local_field_to_utc(changeset, :starting, time_zone)
+
+    if DateTime.compare(starting, now) == :gt do
+      add_error(changeset, :starting_time, "can't be in the future")
+    else
+      changeset
+    end
+  end
+
+  defp validate_session_range(changeset, time_zone, now, false = _running?) do
+    starting = local_field_to_utc(changeset, :starting, time_zone)
+    ending = local_field_to_utc(changeset, :ending, time_zone)
 
     cond do
       DateTime.compare(ending, starting) != :gt ->
@@ -96,19 +140,12 @@ defmodule Employin.Events.Event do
     end
   end
 
-  defp utc_range(changeset, time_zone) do
-    {
-      TimeZones.local_to_utc(
-        get_field(changeset, :starting_date),
-        get_field(changeset, :starting_time),
-        time_zone
-      ),
-      TimeZones.local_to_utc(
-        get_field(changeset, :ending_date),
-        get_field(changeset, :ending_time),
-        time_zone
-      )
-    }
+  defp local_field_to_utc(changeset, prefix, time_zone) do
+    TimeZones.local_to_utc(
+      get_field(changeset, :"#{prefix}_date"),
+      get_field(changeset, :"#{prefix}_time"),
+      time_zone
+    )
   end
 
   defp put_default_time(changeset) do

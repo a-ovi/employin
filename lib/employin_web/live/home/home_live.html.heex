@@ -8,20 +8,30 @@
       loader={@events_loader}
       more_events?={@more_events?}
       time_zone={@time_zone}
+      current_user_id={@current_user.id}
     />
     <.status_card working={@working?} form={@quick_form} />
   </main>
 </div>
 
-<.modal
-  :if={@show_session_modal}
-  id="session-modal"
-  show
-  on_cancel={JS.push("close-session-modal")}
->
-  <h2 id="session-modal-title" class="text-2xl font-bold text-gray-900">Add past work session</h2>
+<.modal :if={@session_modal} id="session-modal" show on_cancel={JS.push("close-session-modal")}>
+  <h2 id="session-modal-title" class="text-2xl font-bold text-gray-900">
+    {if @session_modal.mode == :edit, do: "Edit work session", else: "Add past work session"}
+  </h2>
   <p id="session-modal-description" class="mb-6 mt-1 text-sm text-gray-500">
-    Record a work session you forgot to log. Times are in your local timezone.
+    <%= cond do %>
+      <% @session_modal.running? -> %>
+        This session is still running. You can change when it started.
+      <% @session_modal.mode == :edit -> %>
+        Change the times or location. Times are in your local timezone.
+      <% true -> %>
+        Record a work session you forgot to log. Times are in your local timezone.
+    <% end %>
   </p>
-  <.session_form form={@session_form} today={local_date(DateTime.utc_now(), @time_zone)} />
+  <.session_form
+    form={@session_form}
+    today={local_date(DateTime.utc_now(), @time_zone)}
+    running?={@session_modal.running?}
+    editing?={@session_modal.mode == :edit}
+  />
 </.modal>

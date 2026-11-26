@@ -43,6 +43,7 @@ defmodule EmployinWeb.HomeComponents do
   attr :loader, Phoenix.LiveView.AsyncResult, required: true
   attr :more_events?, :boolean, required: true
   attr :time_zone, :string, required: true
+  attr :current_user_id, :string, required: true
 
   def activity_log(assigns) do
     ~H"""
@@ -88,6 +89,7 @@ defmodule EmployinWeb.HomeComponents do
                 id={dom_id}
                 event={item.event}
                 time_zone={@time_zone}
+                editable?={item.event.user_id == @current_user_id}
               />
             <% end %>
           </ul>
@@ -129,6 +131,7 @@ defmodule EmployinWeb.HomeComponents do
   attr :id, :string, required: true
   attr :event, :map, required: true
   attr :time_zone, :string, required: true
+  attr :editable?, :boolean, default: false
 
   def event_item(assigns) do
     ~H"""
@@ -144,6 +147,17 @@ defmodule EmployinWeb.HomeComponents do
           <span class="truncate font-medium text-gray-900 sm:mr-1">{@event.user.display_name}</span>
           <span class="truncate text-sm text-gray-500">({@event.user.email})</span>
         </div>
+        <button
+          :if={@editable?}
+          type="button"
+          phx-click="edit-session"
+          phx-value-id={@event.id}
+          class="shrink-0 rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+          aria-label="Edit this work session"
+          title="Edit this work session"
+        >
+          <.icon name="hero-pencil-square" class="h-4 w-4" />
+        </button>
       </div>
       <div class="mt-1 flex w-full items-center justify-between pl-5">
         <div class="flex items-center gap-2">
@@ -245,6 +259,8 @@ defmodule EmployinWeb.HomeComponents do
 
   attr :form, Phoenix.HTML.Form, required: true
   attr :today, Date, required: true
+  attr :running?, :boolean, default: false
+  attr :editing?, :boolean, default: false
 
   def session_form(assigns) do
     ~H"""
@@ -263,7 +279,7 @@ defmodule EmployinWeb.HomeComponents do
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset :if={!@running?}>
         <legend class="mb-1 font-semibold text-gray-900">End work</legend>
         <div class="grid grid-cols-2 gap-4">
           <.input type="date" field={@form[:ending_date]} label="Date" max={@today} />
@@ -285,10 +301,24 @@ defmodule EmployinWeb.HomeComponents do
         </button>
         <button
           type="submit"
-          phx-disable-with="Creating..."
+          phx-disable-with="Saving..."
           class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
-          Create
+          {if @editing?, do: "Save", else: "Create"}
+        </button>
+        <button
+          :if={@editing?}
+          id="delete-session-btn"
+          type="button"
+          phx-click="delete-session"
+          data-confirm={
+            if @running?,
+              do: "Cancel the running session?",
+              else: "Delete this work session?"
+          }
+          class="ml-auto rounded-md px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+        >
+          Delete
         </button>
       </div>
     </.form>

@@ -374,7 +374,7 @@ defmodule EmployinWeb.CoreComponents do
         type={@type}
         name={@name}
         id={@id}
-        value={Form.normalize_value(@type, @value)}
+        value={input_value(@type, @value)}
         class={[input_class(@label, @errors), @class]}
         {@rest}
       />
@@ -382,6 +382,10 @@ defmodule EmployinWeb.CoreComponents do
     </div>
     """
   end
+
+  # <input type="time"> shows a seconds field when the value has seconds.
+  defp input_value("time", %Time{} = time), do: Calendar.strftime(time, "%H:%M")
+  defp input_value(type, value), do: Form.normalize_value(type, value)
 
   defp input_class(label, errors) do
     [
