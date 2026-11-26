@@ -11,6 +11,8 @@ defmodule Employin.LoginToken do
       to the profile setup page.
     * `:session` – carries a user id from the registration LiveView to the
       session controller, which turns it into a cookie session.
+    * `:pending` – *encrypted* state of a login in progress (email, OTP token,
+      time sent), kept in the login page URL so a refresh doesn't lose it.
 
   Configuration (see `config/*.exs` and `config/runtime.exs`):
 
@@ -24,10 +26,11 @@ defmodule Employin.LoginToken do
   @purposes %{
     otp: %{salt: "otp login", max_age: 5 * 60},
     registration: %{salt: "registration", max_age: 10 * 60},
-    session: %{salt: "session login", max_age: 60}
+    session: %{salt: "session login", max_age: 60},
+    pending: %{salt: "pending login", max_age: 5 * 60}
   }
 
-  @type purpose :: :otp | :registration | :session
+  @type purpose :: :otp | :registration | :session | :pending
 
   @doc "Creates a fresh OTP and a token that can only be verified with it."
   @spec create_otp_and_token(String.t()) :: %{otp: String.t(), token: String.t()}
@@ -71,6 +74,21 @@ defmodule Employin.LoginToken do
   end
 
   def verify(_purpose, _token, _key_suffix), do: {:error, :invalid}
+
+  @doc "Encrypts `data` for the given purpose (the payload is not readable by the client)."
+  @spec encrypt(purpose(), term()) :: String.t()
+  def encrypt(purpose, data) do
+    Phoenix.Token.encrypt(secret(), salt(purpose), data)
+  end
+
+  @doc "Decrypts a token issued with `encrypt/2` for the same purpose."
+  @spec decrypt(purpose(), term()) :: {:ok, term()} | {:error, atom()}
+  def decrypt(purpose, token) when is_binary(token) do
+    %{max_age: max_age} = Map.fetch!(@purposes, purpose)
+    Phoenix.Token.decrypt(secret(), salt(purpose), token, max_age: max_age)
+  end
+
+  def decrypt(_purpose, _token), do: {:error, :invalid}
 
   defp salt(purpose) do
     %{salt: salt} = Map.fetch!(@purposes, purpose)

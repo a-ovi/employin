@@ -6,7 +6,13 @@ defmodule EmployinWeb.LoginLive do
     2. The user enters the OTP. Once it is verified, the form is submitted to
        `SessionController.otp_check/2` (`phx-trigger-action`) to set the session cookie.
 
-  Resending is throttled server-side by `@resend_cooldown` seconds.
+  The OTP step lives in the URL (`/login?s=...`) as an encrypted, short-lived
+  `:pending` token (email, OTP token, time sent). Refreshing the page keeps the
+  user on the OTP step, and `handle_params/3` is the only place that decides
+  which step is shown.
+
+  Resending is throttled server-side by `@resend_cooldown` seconds, measured
+  from the time stored in the pending token, so a refresh doesn't reset it.
   """
   use EmployinWeb, :live_view
 
@@ -20,13 +26,30 @@ defmodule EmployinWeb.LoginLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    socket =
-      socket
-      |> assign(:page_title, "Log In")
-      |> assign(:resend_cooldown, @resend_cooldown)
-      |> reset_to_email_step()
+    {:ok,
+     socket
+     |> assign(:page_title, "Log In")
+     |> assign(:trigger_submit, false)
+     |> assign(:form, empty_email_form())
+     |> assign(:otp_form, to_form(%{"otp" => ""}))}
+  end
 
-    {:ok, socket}
+  @impl true
+  def handle_params(%{"s" => state}, _uri, socket) do
+    case LoginToken.decrypt(:pending, state) do
+      {:ok, %{email: email, token: token, sent_at: sent_at}} ->
+        {:noreply, assign_otp_step(socket, email, token, sent_at)}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Your verification code has expired. Please request a new one.")
+         |> assign_email_step()}
+    end
+  end
+
+  def handle_params(_params, _uri, socket) do
+    {:noreply, assign_email_step(socket)}
   end
 
   @impl true
@@ -44,14 +67,7 @@ defmodule EmployinWeb.LoginLive do
 
     case Ecto.Changeset.apply_action(changeset, :insert) do
       {:ok, %{email: email}} ->
-        socket =
-          socket
-          |> assign(:step, :enter_otp)
-          |> assign(:email, email)
-          |> assign(:otp_form, to_form(%{"otp" => ""}))
-          |> deliver_otp("OTP sent", "Can't send OTP. Please try again.")
-
-        {:noreply, socket}
+        {:noreply, deliver_otp(socket, email, "OTP sent", "Can't send OTP. Please try again.")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
@@ -59,8 +75,11 @@ defmodule EmployinWeb.LoginLive do
   end
 
   def handle_event("resend-otp", _params, socket) do
-    if System.monotonic_time(:second) >= socket.assigns.resend_available_at do
-      {:noreply, deliver_otp(socket, "OTP sent again", "Can't resend OTP. Please try again.")}
+    %{email: email, resend_available_at: available_at} = socket.assigns
+
+    if now() >= available_at do
+      {:noreply,
+       deliver_otp(socket, email, "OTP sent again", "Can't resend OTP. Please try again.")}
     else
       {:noreply, put_flash(socket, :error, "Please wait before requesting a new code.")}
     end
@@ -82,23 +101,36 @@ defmodule EmployinWeb.LoginLive do
   end
 
   def handle_event("back-to-email", _params, socket) do
-    {:noreply, reset_to_email_step(socket)}
+    {:noreply, push_patch(socket, to: ~p"/login")}
   end
 
-  defp reset_to_email_step(socket) do
+  defp assign_email_step(socket) do
     socket
     |> assign(:step, :enter_email)
     |> assign(:email, "")
     |> assign(:token, "")
-    |> assign(:trigger_submit, false)
     |> assign(:show_countdown, false)
+    |> assign(:countdown_seconds, 0)
     |> assign(:resend_available_at, 0)
-    |> assign(:form, %User{} |> Ecto.Changeset.change() |> to_form())
+    |> assign(:form, empty_email_form())
     |> assign(:otp_form, to_form(%{"otp" => ""}))
   end
 
-  defp deliver_otp(socket, success_msg, error_msg) do
-    email = socket.assigns.email
+  defp assign_otp_step(socket, email, token, sent_at) do
+    available_at = sent_at + @resend_cooldown
+    remaining = max(available_at - now(), 0)
+
+    socket
+    |> assign(:step, :enter_otp)
+    |> assign(:email, email)
+    |> assign(:token, token)
+    |> assign(:resend_available_at, available_at)
+    |> assign(:countdown_seconds, remaining)
+    |> assign(:show_countdown, remaining > 0)
+    |> assign(:otp_form, to_form(%{"otp" => ""}))
+  end
+
+  defp deliver_otp(socket, email, success_msg, error_msg) do
     %{token: token, otp: otp} = LoginToken.create_otp_and_token(email)
     url = url(~p"/login/verify?token=#{token}&otp=#{otp}")
 
@@ -108,9 +140,11 @@ defmodule EmployinWeb.LoginLive do
         {:error, _reason} -> put_flash(socket, :error, error_msg)
       end
 
-    socket
-    |> assign(:token, token)
-    |> assign(:show_countdown, true)
-    |> assign(:resend_available_at, System.monotonic_time(:second) + @resend_cooldown)
+    state = LoginToken.encrypt(:pending, %{email: email, token: token, sent_at: now()})
+    push_patch(socket, to: ~p"/login?#{[s: state]}")
   end
+
+  defp empty_email_form, do: %User{} |> Ecto.Changeset.change() |> to_form()
+
+  defp now, do: System.system_time(:second)
 end
