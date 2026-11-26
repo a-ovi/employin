@@ -1,0 +1,22 @@
+# Copy to .envrc (git-ignored) and load with direnv or `source .envrc`.
+# Development needs none of these. They are listed for production-like runs.
+# See the "Environment variables" section in README.md.
+
+# --- required in production ---
+export SECRET_KEY_BASE="generate-with-mix-phx.gen.secret"
+export DATABASE_URL="ecto://postgres:postgres@localhost/employin_dev"
+export TOKEN_SECRET="generate-with-mix-phx.gen.secret"
+export EMAIL_FROM="noreply@example.com"
+export SMTP_ENDPOINT="email-smtp.us-west-2.amazonaws.com"
+export SMTP_USERNAME="your-smtp-username"
+export SMTP_PASSWORD="your-smtp-password"
+
+# --- optional ---
+export PHX_HOST="localhost"
+export PORT="4000"
+# export ORIGINS="https://employin.example.com"
+export EMAIL_NAME="Employin"
+# export EMAIL_DOMAIN="example.com"
+export SMTP_PORT="587"
+# export TOKEN_SALT="employin"
+# export POOL_SIZE="10"
