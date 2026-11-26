@@ -54,8 +54,8 @@ defmodule EmployinWeb.ConnCase do
       view
       |> Phoenix.LiveViewTest.element(selector)
       |> Phoenix.LiveViewTest.render()
-      |> Floki.parse_fragment!()
-      |> Floki.attribute("value")
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.attribute("value")
 
     value
   end
