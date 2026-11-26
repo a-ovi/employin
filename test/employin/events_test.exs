@@ -16,7 +16,13 @@ defmodule Employin.EventsTest do
       assert {:ok, %Event{type: "left", tags: "Remote"}} =
                Events.toggle_status(user.id, "On-site")
 
-      assert {:ok, %Event{type: "joined", tags: nil}} = Events.toggle_status(user.id, nil)
+      assert {:ok, %Event{type: "joined", tags: "On-site"}} =
+               Events.toggle_status(user.id, "On-site")
+    end
+
+    test "starts work at the default location when none is given", %{user: user} do
+      assert {:ok, %Event{type: "joined", tags: "Remote"}} = Events.toggle_status(user.id, nil)
+      assert Event.default_tag() == "Remote"
     end
 
     test "rejects unknown locations", %{user: user} do

@@ -38,6 +38,29 @@ defmodule EmployinWeb.HomeLiveTest do
       assert %{type: "left", tags: "On-site"} = Events.last_event(user.id)
     end
 
+    test "pre-selects a location for new sessions", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/")
+      render_async(lv)
+
+      # No "Select" placeholder: the default location is chosen.
+      refute has_element?(lv, "#location-tag option[value='']")
+      assert has_element?(lv, "#location-tag option[value='Remote'][selected]")
+
+      # Submitting without touching the select starts work at the default location.
+      lv |> form("#quick-event-form") |> render_submit()
+      assert %{type: "joined", tags: "Remote"} = Events.last_event(user.id)
+
+      # Ending and starting again pre-selects the last used location.
+      lv |> form("#quick-event-form") |> render_submit()
+      lv |> form("#quick-event-form", quick_event: %{tags: "On-site"}) |> render_submit()
+      lv |> form("#quick-event-form") |> render_submit()
+      assert has_element?(lv, "#location-tag option[value='On-site'][selected]")
+
+      lv |> element("#add-session-btn") |> render_click()
+      refute has_element?(lv, "#session_tags option[value='']")
+      assert has_element?(lv, "#session_tags option[value='On-site'][selected]")
+    end
+
     test "only highlights events that arrive live", %{conn: conn} do
       other = user_fixture(%{display_name: "Other Person"})
       old = event_fixture(other, "joined", minutes_from_now(-60))

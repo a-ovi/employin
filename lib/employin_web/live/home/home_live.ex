@@ -72,7 +72,12 @@ defmodule EmployinWeb.HomeLive do
 
   def handle_event("show-session-modal", _params, socket) do
     today = local_today(socket)
-    defaults = %{"starting_date" => today, "ending_date" => today, "tags" => nil}
+
+    defaults = %{
+      "starting_date" => today,
+      "ending_date" => today,
+      "tags" => socket.assigns.last_location
+    }
 
     form =
       defaults
@@ -185,12 +190,18 @@ defmodule EmployinWeb.HomeLive do
   defp assign_status(socket, event) do
     status = Events.current_status(event)
     # Pre-select the last used location for the next session.
-    tags = (event && event.tags) || ""
+    location = last_location(event)
 
     socket
     |> assign(:current_status, status)
     |> assign(:working?, status == Event.joined())
-    |> assign(:quick_form, to_form(%{"tags" => tags}, as: :quick_event))
+    |> assign(:last_location, location)
+    |> assign(:quick_form, to_form(%{"tags" => location}, as: :quick_event))
+  end
+
+  defp last_location(event) do
+    tags = event && event.tags
+    if tags in Event.tags(), do: tags, else: Event.default_tag()
   end
 
   # Live events are only shown if they fall inside the loaded window, so the
