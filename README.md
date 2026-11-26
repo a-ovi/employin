@@ -3,8 +3,8 @@
 [![CI](https://github.com/a-ovi/employin/actions/workflows/ci.yml/badge.svg)](https://github.com/a-ovi/employin/actions/workflows/ci.yml)
 
 Employin is a small real-time attendance tracker built with Elixir, Phoenix and LiveView.
-Team members record when they start and end work with a single click, add sessions they
-forgot to log, and see everyone's activity update live, with no page refreshes.
+Team members record when they start and end work with a single click, fix or add sessions
+they forgot to log, see everyone's activity update live, and export hours worked.
 
 ## Demo
 
@@ -13,15 +13,23 @@ forgot to log, and see everyone's activity update live, with no page refreshes.
   <img src="docs/images/modal.png" width="32%" alt="Form for adding a past work session" />
   <img src="docs/images/login.png" width="32%" alt="One-time password login step" />
 </div>
+<div align="center">
+  <img src="docs/images/reports.png" width="97%" alt="Weekly report of hours per person per day" />
+</div>
 
 ## Features
 
-- **One-click start/end of work**, tagged with a location (Remote / On-site).
-- **Real-time activity log** of all users, updated live over Phoenix PubSub.
-  Times are shown in each viewer's local timezone, and older entries load as you scroll up.
-- **Past work sessions:** add a session you forgot to log. Overlapping or
-  impossible ranges are rejected, and writes are serialized per user to avoid races.
+- **One-click start/end of work**, tagged with a location (Remote / On-site, defaulting
+  to the last one used).
+- **Real-time activity log** of all users, updated live over Phoenix PubSub and rendered
+  with LiveView streams. Times show in each viewer's own IANA timezone (DST-aware), and
+  older entries load as you scroll up.
+- **Manage your sessions:** add a session you forgot to log, or edit or delete your own.
+  Overlapping or impossible ranges are rejected, and writes are serialized per user.
+- **Reports:** hours per person per day for any week or month, split at local midnight,
+  with CSV export.
 - **Passwordless login:** a one-time password and a magic link are emailed to the user.
+  Links are single-use, and both sending codes and guessing them are rate-limited.
   New users pick a display name on their first login.
 - **Optional domain restriction:** only allow sign-ups from your company's email domain.
 
@@ -29,11 +37,11 @@ forgot to log, and see everyone's activity update live, with no page refreshes.
 
 | Layer    | Technology |
 |----------|------------|
-| Backend  | Elixir 1.18, Phoenix 1.7, Phoenix LiveView 1.0, Ecto |
+| Backend  | Elixir 1.18, Phoenix 1.8, Phoenix LiveView 1.2, Ecto, Hammer, tz |
 | Frontend | LiveView function components, Tailwind CSS, Heroicons, a few small JS hooks |
 | Database | PostgreSQL (`citext`, UUIDv7 primary keys) |
 | Email    | Swoosh (local mailbox in dev, SMTP / AWS SES in production) |
-| Tooling  | ExUnit + LiveViewTest, GitHub Actions CI, multi-stage Docker release |
+| Tooling  | ExUnit + LiveViewTest, Credo, Dialyzer, GitHub Actions CI, multi-stage Docker release |
 
 The design is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and
 planned improvements are in [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -72,6 +80,8 @@ copy [`.envrc.example`](.envrc.example) to `.envrc` (it is git-ignored) and load
 mix test                          # unit, controller and LiveView tests
 mix format --check-formatted
 mix compile --warnings-as-errors
+mix credo --strict
+mix dialyzer                      # first run builds the PLT into priv/plts (slow)
 ```
 
 The same checks run on every push and pull request in GitHub Actions.
