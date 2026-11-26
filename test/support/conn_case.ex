@@ -27,6 +27,8 @@ defmodule EmployinWeb.ConnCase do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
+      import Phoenix.LiveViewTest
+      import Employin.Fixtures
       import EmployinWeb.ConnCase
     end
   end
@@ -34,5 +36,33 @@ defmodule EmployinWeb.ConnCase do
   setup tags do
     Employin.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
+  end
+
+  @doc "Puts `user` into the session of `conn`."
+  def log_in_user(conn, user) do
+    Phoenix.ConnTest.init_test_session(conn, %{user_id: user.id})
+  end
+
+  @doc """
+  Reads the value of a hidden input from a LiveView.
+
+  `follow_trigger_action/2` only posts the data given to `form/3`, so tests
+  have to pass hidden inputs (like tokens) explicitly.
+  """
+  def hidden_value(view, selector) do
+    [value] =
+      view
+      |> Phoenix.LiveViewTest.element(selector)
+      |> Phoenix.LiveViewTest.render()
+      |> Floki.parse_fragment!()
+      |> Floki.attribute("value")
+
+    value
+  end
+
+  @doc "Setup helper that registers and logs in a user."
+  def register_and_log_in_user(%{conn: conn}) do
+    user = Employin.Fixtures.user_fixture()
+    %{conn: log_in_user(conn, user), user: user}
   end
 end

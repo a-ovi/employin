@@ -5,10 +5,14 @@ defmodule EmployinWeb.ErrorHTMLTest do
   import Phoenix.Template
 
   test "renders 404.html" do
-    assert render_to_string(EmployinWeb.ErrorHTML, "404", "html", []) == "Not Found"
+    assert render_to_string(EmployinWeb.ErrorHTML, "404", "html", []) =~ "Page Not Found"
   end
 
   test "renders 500.html" do
-    assert render_to_string(EmployinWeb.ErrorHTML, "500", "html", []) == "Internal Server Error"
+    assert render_to_string(EmployinWeb.ErrorHTML, "500", "html", []) =~ "Server Error"
+  end
+
+  test "falls back to the status message for other templates" do
+    assert render_to_string(EmployinWeb.ErrorHTML, "403", "html", []) == "Forbidden"
   end
 end

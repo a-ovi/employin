@@ -24,6 +24,7 @@ defmodule Employin.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Employin.DataCase
+      import Employin.Fixtures
     end
   end
 
