@@ -32,6 +32,11 @@ config :employin, EmployinWeb.Endpoint,
 # at the `config/runtime.exs`.
 config :employin, Employin.Mailer, adapter: Swoosh.Adapters.Local
 
+# Sender used for outgoing emails (overridden in runtime.exs for prod).
+config :employin, Employin.MailNotifier,
+  from_name: "Employin",
+  from_email: "noreply@employin.local"
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.17.11",

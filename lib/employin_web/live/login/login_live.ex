@@ -1,143 +1,116 @@
 defmodule EmployinWeb.LoginLive do
+  @moduledoc """
+  Two-step passwordless login.
+
+    1. The user enters an email. We email them a one-time password and a magic link.
+    2. The user enters the OTP. Once it is verified, the form is submitted to
+       `SessionController.otp_check/2` (`phx-trigger-action`) to set the session cookie.
+
+  Resending is throttled server-side by `@resend_cooldown` seconds.
+  """
   use EmployinWeb, :live_view
-  alias Employin.Users.User
+
+  import EmployinWeb.AuthComponents
+
   alias Employin.LoginToken
   alias Employin.MailNotifier
+  alias Employin.Users.User
+
+  @resend_cooldown 120
 
   @impl true
   def mount(_params, _session, socket) do
     socket =
       socket
       |> assign(:page_title, "Log In")
-      |> assign(:step, :enter_email)
-      |> assign(:token, "")
-      |> assign(:otp, "")
-      |> assign(:trigger_submit, false)
-      |> assign(:email, "")
-      |> assign(:show_countdown, false)
-      |> assign(:form, %User{} |> Ecto.Changeset.change() |> to_form())
+      |> assign(:resend_cooldown, @resend_cooldown)
+      |> reset_to_email_step()
 
     {:ok, socket}
   end
 
   @impl true
-  def handle_event("validate", %{"user" => user_email}, socket) do
+  def handle_event("validate", %{"user" => params}, socket) do
     form =
       %User{}
-      |> User.change_email(user_email)
+      |> User.change_email(params)
       |> to_form(action: :validate)
 
     {:noreply, assign(socket, form: form)}
   end
 
-  @impl true
-  def handle_event("send-otp", %{"user" => user_email}, socket) do
-    email_changeset =
-      User.change_email(%User{}, user_email)
+  def handle_event("send-otp", %{"user" => params}, socket) do
+    changeset = User.change_email(%User{}, params)
 
-    if email_changeset.valid? do
-      # create otp and token
-      %{email: email} = email_changeset.changes
-      %{token: token, otp: otp} = LoginToken.create_otp_and_token(email)
+    case Ecto.Changeset.apply_action(changeset, :insert) do
+      {:ok, %{email: email}} ->
+        socket =
+          socket
+          |> assign(:step, :enter_otp)
+          |> assign(:email, email)
+          |> assign(:otp_form, to_form(%{"otp" => ""}))
+          |> deliver_otp("OTP sent", "Can't send OTP. Please try again.")
 
-      socket =
-        case send_email(email, token, otp) do
-          {:ok, _meta} ->
-            put_flash(socket, :info, "OTP Sent")
+        {:noreply, socket}
 
-          {:error, _error} ->
-            put_flash(socket, :error, "Can't send otp")
-        end
-
-      {
-        :noreply,
-        socket
-        |> assign(:step, :enter_otp)
-        |> assign(:token, token)
-        |> assign(:email, email)
-        |> assign(:show_countdown, true)
-        |> assign(:form, to_form(%{"otp" => ""}))
-      }
-    else
-      {:noreply, assign(socket, form: to_form(email_changeset, action: :save))}
+      {:error, changeset} ->
+        {:noreply, assign(socket, form: to_form(changeset))}
     end
   end
 
-  @impl true
-  def handle_event("resend-otp", _unsigned_params, socket) do
-    email = socket.assigns.email
-
-    %{otp: otp, token: token} = LoginToken.create_otp_and_token(email)
-
-    socket =
-      case send_email(email, token, otp) do
-        {:ok, _meta} ->
-          put_flash(socket, :info, "OTP sent again")
-
-        {:error, _error} ->
-          put_flash(socket, :error, "Can't resend otp")
-      end
-
-    socket =
-      socket
-      |> assign(:token, token)
-      |> assign(:show_countdown, true)
-      |> push_event("restart-countdown", %{})
-
-    {:noreply, socket}
+  def handle_event("resend-otp", _params, socket) do
+    if System.monotonic_time(:second) >= socket.assigns.resend_available_at do
+      {:noreply, deliver_otp(socket, "OTP sent again", "Can't resend OTP. Please try again.")}
+    else
+      {:noreply, put_flash(socket, :error, "Please wait before requesting a new code.")}
+    end
   end
 
-  @impl true
   def handle_event("countdown-finished", _params, socket) do
-    socket =
-      socket
-      |> assign(:show_countdown, false)
-
-    {:noreply, socket}
+    {:noreply, assign(socket, :show_countdown, false)}
   end
 
-  @impl true
   def handle_event("submit-otp", %{"otp" => otp}, socket) do
-    token = socket.assigns.token
-
-    case LoginToken.verify_token_with_otp(token, otp) do
-      {:ok, _} ->
+    case LoginToken.verify_otp(socket.assigns.token, otp) do
+      {:ok, _email} ->
         {:noreply, assign(socket, trigger_submit: true)}
 
       {:error, _} ->
-        error = [otp: {"invalid or expired otp", []}]
-        fields = %{"otp" => ""}
-
-        {
-          :noreply,
-          assign(
-            socket,
-            form: to_form(fields, errors: error, action: :validate)
-          )
-        }
+        form = to_form(%{"otp" => ""}, errors: [otp: {"invalid or expired code", []}])
+        {:noreply, assign(socket, otp_form: form)}
     end
   end
 
   def handle_event("back-to-email", _params, socket) do
+    {:noreply, reset_to_email_step(socket)}
+  end
+
+  defp reset_to_email_step(socket) do
+    socket
+    |> assign(:step, :enter_email)
+    |> assign(:email, "")
+    |> assign(:token, "")
+    |> assign(:trigger_submit, false)
+    |> assign(:show_countdown, false)
+    |> assign(:resend_available_at, 0)
+    |> assign(:form, %User{} |> Ecto.Changeset.change() |> to_form())
+    |> assign(:otp_form, to_form(%{"otp" => ""}))
+  end
+
+  defp deliver_otp(socket, success_msg, error_msg) do
+    email = socket.assigns.email
+    %{token: token, otp: otp} = LoginToken.create_otp_and_token(email)
+    url = url(~p"/login/verify?token=#{token}&otp=#{otp}")
+
     socket =
-      socket
-      |> assign(:step, :enter_email)
-      |> assign(:token, "")
-      |> assign(:otp, "")
-      |> assign(:show_countdown, false)
-      |> push_event("reset-global-timer", %{})
-      |> assign(:form, %User{} |> Ecto.Changeset.change() |> to_form())
+      case MailNotifier.login_instructions(email, url, otp) do
+        {:ok, _meta} -> put_flash(socket, :info, success_msg)
+        {:error, _reason} -> put_flash(socket, :error, error_msg)
+      end
 
-    {:noreply, socket}
-  end
-
-  defp send_email(email, token, otp) do
-    url = get_url(token, otp)
-
-    MailNotifier.login_instructions(email, url, otp)
-  end
-
-  defp get_url(token, otp) do
-    url(~p"/login/verify?token=#{token}&otp=#{otp}")
+    socket
+    |> assign(:token, token)
+    |> assign(:show_countdown, true)
+    |> assign(:resend_available_at, System.monotonic_time(:second) + @resend_cooldown)
   end
 end

@@ -65,6 +65,23 @@ if config_env() == :prod do
 
   config :employin, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  token_secret =
+    System.get_env("TOKEN_SECRET") ||
+      raise """
+      environment variable TOKEN_SECRET is missing.
+      It signs login/OTP tokens. Generate one with: mix phx.gen.secret
+      """
+
+  config :employin, Employin.LoginToken,
+    secret: token_secret,
+    salt: System.get_env("TOKEN_SALT", "employin")
+
+  config :employin, Employin.MailNotifier,
+    from_name: System.get_env("EMAIL_NAME", "Employin"),
+    from_email:
+      System.get_env("EMAIL_FROM") ||
+        raise("environment variable EMAIL_FROM is missing (sender address for login emails)")
+
   config :employin, EmployinWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

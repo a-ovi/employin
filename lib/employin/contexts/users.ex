@@ -1,16 +1,18 @@
 defmodule Employin.Users do
-  import Ecto.Query, warn: false
+  @moduledoc "The Users context: lookup and registration of users."
 
-  alias Employin.Users.User
-  alias Employin.Repo
   alias Ecto.Changeset
+  alias Employin.Repo
+  alias Employin.Users.User
 
-  def get_all() do
-    Repo.all(User)
-  end
+  def get_all, do: Repo.all(User)
 
+  @doc "Fetches a user by id. Returns `nil` for unknown or malformed ids."
   def get(id) do
-    Repo.get(User, id)
+    case Ecto.UUID.cast(id) do
+      {:ok, uuid} -> Repo.get(User, uuid)
+      :error -> nil
+    end
   end
 
   def get_by_email(email) do
@@ -36,6 +38,7 @@ defmodule Employin.Users do
           |> Changeset.change()
           |> Changeset.add_error(:email, "User not found")
         }
+
       user ->
         Repo.delete(user)
     end
