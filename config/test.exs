@@ -20,6 +20,10 @@ config :employin, EmployinWeb.Endpoint,
   secret_key_base: "nFxiUn5fFE71xtYBAni53Y8SoQw8kL6pnbPtPcUGi/IDjrFoHO0OBbkCOcoDSJHH",
   server: false
 
+config :employin, Employin.LoginToken,
+  secret: "test-token-secret-0123456789abcdef",
+  salt: "employin-test"
+
 # In test we don't send emails
 config :employin, Employin.Mailer, adapter: Swoosh.Adapters.Test
 

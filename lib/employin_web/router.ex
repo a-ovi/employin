@@ -13,32 +13,29 @@ defmodule EmployinWeb.Router do
     plug :fetch_current_user
   end
 
-  pipeline :api do
-    plug :accepts, ["json"]
-  end
-
   scope "/", EmployinWeb do
     pipe_through [:browser, :ensure_not_authenticated]
 
-    live "/login", LoginLive
-    live "/profile/setup", RegistrationLive
-    post "/login/with_token", SessionController, :login
-    get "/login/with_token", SessionController, :login
-    post "/login/verify", SessionController, :otp_check
+    live_session :guest, on_mount: [{EmployinWeb.UserAuth, :redirect_if_authenticated}] do
+      live "/login", LoginLive
+      live "/profile/setup", RegistrationLive
+    end
+
+    # The magic link (GET) and the OTP form (POST) share one endpoint.
     get "/login/verify", SessionController, :otp_check
+    post "/login/verify", SessionController, :otp_check
+    post "/login/with_token", SessionController, :login
   end
 
   scope "/", EmployinWeb do
     pipe_through [:browser, :ensure_authenticated]
 
-    live "/", HomeLive
-    get "/logout", SessionController, :logout
-  end
+    live_session :authenticated, on_mount: [{EmployinWeb.UserAuth, :ensure_authenticated}] do
+      live "/", HomeLive
+    end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", EmployinWeb do
-  #   pipe_through :api
-  # end
+    delete "/logout", SessionController, :logout
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:employin, :dev_routes) do

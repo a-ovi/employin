@@ -62,6 +62,11 @@ config :employin, EmployinWeb.Endpoint,
     ]
   ]
 
+# Token signing for the passwordless login flow (dev-only values).
+config :employin, Employin.LoginToken,
+  secret: System.get_env("TOKEN_SECRET", "dev-token-secret-do-not-use-in-production"),
+  salt: System.get_env("TOKEN_SALT", "employin")
+
 # Enable dev routes for dashboard and mailbox
 config :employin, dev_routes: true
 

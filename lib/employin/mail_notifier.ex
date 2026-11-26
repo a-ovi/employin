@@ -1,25 +1,37 @@
 defmodule Employin.MailNotifier do
+  @moduledoc "Builds and delivers transactional emails (login instructions)."
+
   import Swoosh.Email
 
   alias Employin.Mailer
 
   def login_instructions(email, url, otp) do
-    subject = "Login instructions"
-    body = get_body(url, otp)
-    deliver(email, subject, body)
+    new()
+    |> to(email)
+    |> from(sender())
+    |> subject("Login instructions")
+    |> html_body(get_body(url, otp))
+    |> text_body(get_text_body(url, otp))
+    |> Mailer.deliver()
   end
 
-  defp deliver(recipient, subject, body) do
-    name = System.get_env("EMAIL_NAME")
-    from = System.get_env("EMAIL_FROM")
-    email =
-      new()
-      |> to(recipient)
-      |> from({name, from})
-      |> subject(subject)
-      |> html_body(body)
+  defp sender do
+    config = Application.get_env(:employin, __MODULE__, [])
+    {Keyword.get(config, :from_name, "Employin"), Keyword.fetch!(config, :from_email)}
+  end
 
-    Mailer.deliver(email)
+  defp get_text_body(url, otp) do
+    """
+    Hi there,
+
+    Your one-time password is: #{otp}
+
+    Or sign in directly with this link:
+    #{url}
+
+    The code and the link expire in 5 minutes.
+    If you didn't request this, you can safely ignore this email.
+    """
   end
 
   defp get_body(url, otp) do
