@@ -67,7 +67,8 @@ defmodule Employin.MixProject do
       {:dns_cluster, "~> 0.2"},
       {:bandit, "~> 1.5"},
       {:uniq, "~> 0.7"},
-      {:gen_smtp, "~> 1.1"}
+      {:gen_smtp, "~> 1.1"},
+      {:hammer, "~> 7.0"}
     ]
   end
 
