@@ -2,38 +2,16 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
-/* This file is for your main application CSS */
-.while-submitting { display: none; }
-.phx-submit-loading .while-submitting { display: block; }
-.phx-submit-loading .inner-text { display: none; }
-.inner-text { display: block; }
-
+/* Flash a newly arrived activity log entry. */
 @keyframes highlight-fade {
   from {
-    background-color: #fff59e; /* light yellow */
+    background-color: #fef9c3; /* yellow-100 */
   }
   to {
-    background-color: #fff; /* white */
+    background-color: transparent;
   }
 }
 
 .highlight-fade {
   animation: highlight-fade 1.5s ease-out;
-}
-
-.date-divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  color: #6b7280;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.date-divider::before,
-.date-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid #e5e7eb;
-  margin: 0 0.75rem;
 }
