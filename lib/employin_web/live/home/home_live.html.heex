@@ -3,10 +3,11 @@
 
   <main class="mx-auto flex min-h-0 w-full max-w-[500px] flex-1 flex-col gap-4 px-4 py-4 sm:py-6 md:px-0">
     <.activity_log
-      events={@events}
+      log={@streams.log}
+      has_events?={@log_window != nil}
       loader={@events_loader}
       more_events?={@more_events?}
-      tz_offset={@tz_offset}
+      time_zone={@time_zone}
     />
     <.status_card working={@working?} form={@quick_form} />
   </main>
@@ -22,5 +23,5 @@
   <p id="session-modal-description" class="mb-6 mt-1 text-sm text-gray-500">
     Record a work session you forgot to log. Times are in your local timezone.
   </p>
-  <.session_form form={@session_form} today={local_date(DateTime.utc_now(), @tz_offset)} />
+  <.session_form form={@session_form} today={local_date(DateTime.utc_now(), @time_zone)} />
 </.modal>

@@ -34,7 +34,7 @@ defmodule Employin.EventsTest do
       Events.subscribe()
       {:ok, %Event{id: id}} = Events.toggle_status(user.id, nil)
 
-      assert_receive {:new_event, %Event{id: ^id, user: %{email: email}}}
+      assert_receive {:new_events, [%Event{id: ^id, user: %{email: email}}]}
       assert email == user.email
     end
   end
@@ -142,9 +142,27 @@ defmodule Employin.EventsTest do
         "tags" => "Remote"
       }
 
-      # UTC+6: 09:00 local is 03:00 UTC.
+      # Asia/Dhaka is UTC+6: 09:00 local is 03:00 UTC.
       assert {:ok, %{starting: ~U[2026-05-10 03:00:00Z], ending: ~U[2026-05-10 11:30:00Z]}} =
-               Event.apply_session_form(params, 360, @now)
+               Event.apply_session_form(params, "Asia/Dhaka", @now)
+    end
+
+    test "uses the offset in effect on the session's date (DST)" do
+      session = fn date ->
+        %{
+          "starting_date" => date,
+          "starting_time" => "09:00",
+          "ending_date" => date,
+          "ending_time" => "10:00"
+        }
+      end
+
+      # New York is UTC-5 in winter and UTC-4 in summer.
+      assert {:ok, %{starting: ~U[2026-01-15 14:00:00Z]}} =
+               Event.apply_session_form(session.("2026-01-15"), "America/New_York", @now)
+
+      assert {:ok, %{starting: ~U[2026-04-15 13:00:00Z]}} =
+               Event.apply_session_form(session.("2026-04-15"), "America/New_York", @now)
     end
 
     test "requires the end to be after the start and not in the future" do
@@ -153,7 +171,7 @@ defmodule Employin.EventsTest do
       assert {:error, changeset} =
                Event.apply_session_form(
                  Map.merge(base, %{"starting_time" => "10:00", "ending_time" => "09:00"}),
-                 0,
+                 "Etc/UTC",
                  @now
                )
 
@@ -162,7 +180,7 @@ defmodule Employin.EventsTest do
       assert {:error, changeset} =
                Event.apply_session_form(
                  Map.merge(base, %{"starting_time" => "10:00", "ending_time" => "13:00"}),
-                 0,
+                 "Etc/UTC",
                  @now
                )
 
@@ -170,7 +188,7 @@ defmodule Employin.EventsTest do
     end
 
     test "requires all date and time fields" do
-      assert {:error, changeset} = Event.apply_session_form(%{}, 0, @now)
+      assert {:error, changeset} = Event.apply_session_form(%{}, "Etc/UTC", @now)
 
       assert %{starting_date: _, starting_time: _, ending_date: _, ending_time: _} =
                errors_on(changeset)

@@ -12,8 +12,8 @@ const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {
     _csrf_token: csrfToken,
-    // Minutes east of UTC (e.g. 360 for UTC+6). Used to render local times.
-    tz_offset: -new Date().getTimezoneOffset(),
+    // IANA time zone (e.g. "Asia/Dhaka"), used to render and parse local times.
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   },
   hooks: Hooks,
 })
