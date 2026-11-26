@@ -16,6 +16,7 @@ defmodule EmployinWeb.CoreComponents do
   """
   use Phoenix.Component
 
+  alias Phoenix.HTML.Form
   alias Phoenix.LiveView.JS
   use Gettext, backend: EmployinWeb.Gettext
 
@@ -307,7 +308,7 @@ defmodule EmployinWeb.CoreComponents do
   def input(%{type: "checkbox"} = assigns) do
     assigns =
       assign_new(assigns, :checked, fn ->
-        Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
+        Form.normalize_value("checkbox", assigns[:value])
       end)
 
     ~H"""
@@ -342,7 +343,7 @@ defmodule EmployinWeb.CoreComponents do
         {@rest}
       >
         <option :if={@prompt} value="">{@prompt}</option>
-        {Phoenix.HTML.Form.options_for_select(@options, @value)}
+        {Form.options_for_select(@options, @value)}
       </select>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
@@ -358,7 +359,7 @@ defmodule EmployinWeb.CoreComponents do
         name={@name}
         class={[input_class(@label, @errors), "min-h-[6rem]", @class]}
         {@rest}
-      >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
+      >{Form.normalize_value("textarea", @value)}</textarea>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
@@ -373,7 +374,7 @@ defmodule EmployinWeb.CoreComponents do
         type={@type}
         name={@name}
         id={@id}
-        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        value={Form.normalize_value(@type, @value)}
         class={[input_class(@label, @errors), @class]}
         {@rest}
       />

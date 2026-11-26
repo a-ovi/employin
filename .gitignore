@@ -39,3 +39,6 @@ npm-debug.log
 
 # Ignore .envrc file
 .envrc
+
+# Dialyzer PLTs
+/priv/plts/

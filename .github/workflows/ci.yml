@@ -56,5 +56,49 @@ jobs:
       - name: Compile (warnings as errors)
         run: mix compile --warnings-as-errors
 
+      - name: Credo
+        run: mix credo --strict
+
       - name: Run tests
         run: mix test
+
+  dialyzer:
+    name: Dialyzer
+    runs-on: ubuntu-24.04
+
+    env:
+      MIX_ENV: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18.3"
+          otp-version: "27.3.1"
+
+      - name: Cache deps and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: mix-dialyzer-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-dialyzer-${{ runner.os }}-
+
+      # PLTs are slow to build: cache them separately and only rebuild on dep changes.
+      - name: Cache PLTs
+        uses: actions/cache@v4
+        with:
+          path: priv/plts
+          key: plts-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: plts-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Build PLTs
+        run: mkdir -p priv/plts && mix dialyzer --plt
+
+      - name: Run Dialyzer
+        run: mix dialyzer --format github
