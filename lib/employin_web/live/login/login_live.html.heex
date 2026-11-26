@@ -1,7 +1,9 @@
 <.auth_card
   title="Employin"
   subtitle={
-    if @step == :enter_email, do: "Sign in to your account", else: "Enter the verification code"
+    if @step == :enter_email,
+      do: "Sign in to your account",
+      else: "Enter the code we sent to #{@email}"
   }
 >
   <%!-- Both steps stay in the DOM and slide horizontally. --%>
@@ -63,10 +65,10 @@
             id="otp-countdown"
             phx-hook="OtpCountdown"
             phx-update="ignore"
-            data-seconds={@resend_cooldown}
+            data-seconds={@countdown_seconds}
             class="text-gray-700"
           >
-            Resend OTP in {Calendar.strftime(~T[00:00:00] |> Time.add(@resend_cooldown), "%M:%S")}
+            Resend OTP in {Calendar.strftime(Time.add(~T[00:00:00], @countdown_seconds), "%M:%S")}
           </span>
           <button
             :if={!@show_countdown}
