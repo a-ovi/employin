@@ -1,4 +1,8 @@
 defmodule Employin.Schema do
+  @moduledoc """
+  `use Employin.Schema` instead of `Ecto.Schema` to get UUIDv7 primary keys,
+  binary-id foreign keys and `:utc_datetime` timestamps.
+  """
   defmacro __using__(_) do
     quote do
       use Ecto.Schema

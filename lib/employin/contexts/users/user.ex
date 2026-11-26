@@ -59,7 +59,7 @@ defmodule Employin.Users.User do
     |> validate_length(:email, max: 64)
   end
 
-  def get_email_regex() do
+  def get_email_regex do
     case System.get_env("EMAIL_DOMAIN") do
       nil ->
         @email_regex
