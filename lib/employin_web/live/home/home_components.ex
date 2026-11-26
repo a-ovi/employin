@@ -186,7 +186,6 @@ defmodule EmployinWeb.HomeComponents do
             type="select"
             id="location-tag"
             field={@form[:tags]}
-            prompt="Select"
             options={Event.tags()}
             disabled={@working}
             title={@working && "The location can't be changed during a running session"}
@@ -264,13 +263,7 @@ defmodule EmployinWeb.HomeComponents do
         </div>
       </fieldset>
 
-      <.input
-        type="select"
-        field={@form[:tags]}
-        label="Location"
-        prompt="Select location"
-        options={Event.tags()}
-      />
+      <.input type="select" field={@form[:tags]} label="Location" options={Event.tags()} />
 
       <.error :for={msg <- base_errors(@form)}>{msg}</.error>
 

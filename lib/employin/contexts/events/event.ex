@@ -1,7 +1,9 @@
 defmodule Employin.Events.Event do
   @moduledoc """
   A single attendance event: a user either `"joined"` (started work) or
-  `"left"` (ended work) at `time`, optionally tagged with a location.
+  `"left"` (ended work) at `time`, tagged with a location. A `"joined"` event
+  without a location gets `default_tag/0`, and a `"left"` event repeats the
+  location of the session it ends.
 
   Besides the schema changeset, this module provides `session_form_changeset/3`.
   It backs the "add past work session" form, which collects local dates and
@@ -38,10 +40,14 @@ defmodule Employin.Events.Event do
   def left, do: @left
   def tags, do: @tags
 
+  @doc "Location used when a work session is started without one."
+  def default_tag, do: hd(@tags)
+
   def changeset(event, params) do
     event
     |> cast(params, [:type, :time, :tags])
     |> put_default_time()
+    |> put_default_tags()
     |> validate_required([:type, :time])
     |> validate_inclusion(:type, @types)
     |> validate_tags()
@@ -114,6 +120,15 @@ defmodule Employin.Events.Event do
       changeset
     else
       put_change(changeset, :time, DateTime.utc_now(:second))
+    end
+  end
+
+  # Every work session has a location: a "joined" event without one gets the default.
+  defp put_default_tags(changeset) do
+    if get_field(changeset, :type) == @joined and is_nil(get_field(changeset, :tags)) do
+      put_change(changeset, :tags, default_tag())
+    else
+      changeset
     end
   end
 
