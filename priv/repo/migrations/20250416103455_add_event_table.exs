@@ -2,7 +2,7 @@ defmodule Employin.Repo.Migrations.AddEventTable do
   use Ecto.Migration
 
   def up do
-    create table ("events") do
+    create table("events") do
       add :type, :string, null: false
       add :time, :utc_datetime
 
