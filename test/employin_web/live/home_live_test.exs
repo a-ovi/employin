@@ -106,24 +106,55 @@ defmodule EmployinWeb.HomeLiveTest do
       assert html =~ "overlaps with your existing events"
     end
 
-    test "loads older events on demand", %{conn: conn, user: user} do
-      for minutes <- 40..1//-1 do
-        event_fixture(
-          user,
-          if(rem(minutes, 2) == 0, do: "joined", else: "left"),
-          minutes_from_now(-minutes)
-        )
-      end
+    test "loads older events on demand, in order, with one divider per day", %{
+      conn: conn,
+      user: user
+    } do
+      events =
+        for hours <- 40..1//-1 do
+          type = if rem(hours, 2) == 0, do: "joined", else: "left"
+          event_fixture(user, type, minutes_from_now(-hours * 60))
+        end
 
       {:ok, lv, _html} = live(conn, ~p"/")
       render_async(lv)
-      assert lv |> element("#events-list") |> render() |> count_events() == 30
+      assert lv |> log_html() |> event_ids() == events |> Enum.take(-30) |> Enum.map(& &1.id)
 
       render_hook(lv, "load-more", %{})
-      assert lv |> element("#events-list") |> render() |> count_events() == 40
+      html = log_html(lv)
+
+      assert event_ids(html) == Enum.map(events, & &1.id)
+      assert divider_dates(html) == events |> Enum.map(&DateTime.to_date(&1.time)) |> Enum.uniq()
       assert render(lv) =~ "No more events"
+    end
+
+    test "places a past session inside the loaded window in order", %{conn: conn, user: user} do
+      other = user_fixture(%{display_name: "Other Person"})
+      first = event_fixture(other, "joined", minutes_from_now(-600))
+      last = event_fixture(other, "left", minutes_from_now(-60))
+
+      {:ok, lv, _html} = live(conn, ~p"/")
+      render_async(lv)
+
+      {:ok, [joined, left]} =
+        Events.create_work_session(user.id, minutes_from_now(-300), minutes_from_now(-240))
+
+      assert lv |> log_html() |> event_ids() == [first.id, joined.id, left.id, last.id]
+      assert has_element?(lv, "#event-#{joined.id}[phx-mounted]")
+      refute has_element?(lv, "#event-#{first.id}[phx-mounted]")
     end
   end
 
-  defp count_events(html), do: length(Regex.scan(~r/<li id="event-/, html))
+  defp log_html(lv), do: lv |> element("#events-list") |> render()
+
+  defp event_ids(html) do
+    ~r/<li id="event-([0-9a-f-]+)"/ |> Regex.scan(html, capture: :all_but_first) |> List.flatten()
+  end
+
+  defp divider_dates(html) do
+    ~r/<li id="date-(\d{4}-\d{2}-\d{2})-/
+    |> Regex.scan(html, capture: :all_but_first)
+    |> List.flatten()
+    |> Enum.map(&Date.from_iso8601!/1)
+  end
 end

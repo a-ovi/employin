@@ -3,9 +3,9 @@ defmodule EmployinWeb.HomeLive do
   The main page. It has a real-time activity log of every user's events and a
   status card to start or end work. A modal adds past work sessions.
 
-  Business rules live in `Employin.Events`. This LiveView only maps events to
-  lightweight view maps and keeps the loaded window of the log, using keyset
-  pagination ("load more" when the user scrolls to the top).
+  Business rules live in `Employin.Events`. The log is a LiveView stream
+  managed by `EmployinWeb.HomeLive.ActivityLog`, paginated with keyset
+  cursors ("load more" when the user scrolls to the top).
   """
   use EmployinWeb, :live_view
 
@@ -13,11 +13,11 @@ defmodule EmployinWeb.HomeLive do
 
   alias Employin.Events
   alias Employin.Events.Event
+  alias Employin.TimeZones
+  alias EmployinWeb.HomeLive.ActivityLog
   alias Phoenix.LiveView.AsyncResult
 
   @per_page 30
-  # Largest real-world UTC offsets are -12h and +14h.
-  @max_tz_offset 14 * 60
 
   @impl true
   def mount(_params, _session, socket) do
@@ -28,8 +28,8 @@ defmodule EmployinWeb.HomeLive do
     socket =
       socket
       |> assign(:page_title, "Home")
-      |> assign(:tz_offset, tz_offset(socket))
-      |> assign(:events, [])
+      |> assign(:time_zone, time_zone(socket))
+      |> ActivityLog.init()
       |> assign(:more_events?, true)
       |> assign(:show_session_modal, false)
       |> assign_status(last_event)
@@ -41,11 +41,9 @@ defmodule EmployinWeb.HomeLive do
 
   @impl true
   def handle_async(:load_events, {:ok, events}, socket) do
-    loaded = Enum.map(events, &to_view/1)
-
     socket =
       socket
-      |> assign(:events, merge_events(loaded, socket.assigns.events))
+      |> ActivityLog.reset(events)
       |> assign(:more_events?, length(events) == @per_page)
       |> assign(:events_loader, AsyncResult.ok(socket.assigns.events_loader, true))
 
@@ -81,7 +79,7 @@ defmodule EmployinWeb.HomeLive do
 
     form =
       defaults
-      |> Event.session_form_changeset(socket.assigns.tz_offset)
+      |> Event.session_form_changeset(socket.assigns.time_zone)
       |> to_form(as: :session)
 
     {:noreply, assign(socket, show_session_modal: true, session_form: form)}
@@ -94,16 +92,16 @@ defmodule EmployinWeb.HomeLive do
   def handle_event("validate-session", %{"session" => params}, socket) do
     form =
       params
-      |> Event.session_form_changeset(socket.assigns.tz_offset)
+      |> Event.session_form_changeset(socket.assigns.time_zone)
       |> to_form(as: :session, action: :validate)
 
     {:noreply, assign(socket, :session_form, form)}
   end
 
   def handle_event("save-session", %{"session" => params}, socket) do
-    %{current_user: user, tz_offset: tz_offset} = socket.assigns
+    %{current_user: user, time_zone: time_zone} = socket.assigns
 
-    case Event.apply_session_form(params, tz_offset) do
+    case Event.apply_session_form(params, time_zone) do
       {:ok, session} ->
         user.id
         |> Events.create_work_session(session.starting, session.ending, session.tags)
@@ -118,34 +116,35 @@ defmodule EmployinWeb.HomeLive do
     {:reply, %{more: false}, socket}
   end
 
-  def handle_event("load-more", _params, %{assigns: %{events: []}} = socket) do
+  def handle_event("load-more", _params, %{assigns: %{log_window: nil}} = socket) do
     # Nothing loaded yet (initial load still running): let the client retry later.
     {:reply, %{more: true}, socket}
   end
 
   def handle_event("load-more", _params, socket) do
-    [oldest | _] = socket.assigns.events
-    page = Events.list_events(limit: @per_page, before: {oldest.time, oldest.id})
+    cursor = ActivityLog.oldest_cursor(socket.assigns)
+    page = Events.list_events(limit: @per_page, before: cursor)
     more? = length(page) == @per_page
 
     socket =
       socket
-      |> assign(:events, merge_events(Enum.map(page, &to_view/1), socket.assigns.events))
+      |> ActivityLog.prepend(page)
       |> assign(:more_events?, more?)
 
     {:reply, %{more: more?}, socket}
   end
 
   @impl true
-  def handle_info({:new_event, %Event{} = event}, socket) do
+  def handle_info({:new_events, events}, socket) do
+    user_id = socket.assigns.current_user.id
+
     socket =
-      if event.user_id == socket.assigns.current_user.id do
-        assign_status(socket, event)
-      else
-        socket
+      case events |> Enum.filter(&(&1.user_id == user_id)) |> List.last() do
+        nil -> socket
+        latest -> assign_status(socket, Events.last_event(user_id) || latest)
       end
 
-    {:noreply, maybe_add_event(socket, event)}
+    {:noreply, add_events(socket, events)}
   end
 
   ## Helpers
@@ -160,7 +159,7 @@ defmodule EmployinWeb.HomeLive do
   defp handle_session_result({:error, :overlap}, params, socket) do
     form =
       params
-      |> Event.session_form_changeset(socket.assigns.tz_offset)
+      |> Event.session_form_changeset(socket.assigns.time_zone)
       |> Ecto.Changeset.add_error(:base, "This session overlaps with your existing events.")
       |> to_form(as: :session, action: :validate)
 
@@ -169,22 +168,6 @@ defmodule EmployinWeb.HomeLive do
 
   defp handle_session_result({:error, _changeset}, _params, socket) do
     {:noreply, put_flash(socket, :error, "Couldn't save the session. Please try again.")}
-  end
-
-  @doc false
-  def to_view(%Event{} = event, fresh? \\ false) do
-    %{
-      id: event.id,
-      user_id: event.user_id,
-      type: event.type,
-      tags: event.tags,
-      time: event.time,
-      fresh?: fresh?,
-      user: %{
-        display_name: event.user && event.user.display_name,
-        email: event.user && event.user.email
-      }
-    }
   end
 
   defp assign_status(socket, event) do
@@ -206,40 +189,34 @@ defmodule EmployinWeb.HomeLive do
 
   # Live events are only shown if they fall inside the loaded window, so the
   # log never has gaps. Older ones show up through "load more".
-  defp maybe_add_event(socket, event) do
-    case socket.assigns.events do
-      [oldest | _] = events ->
-        if after_or_equal?(event, oldest) do
-          assign(socket, :events, merge_events([to_view(event, true)], events))
-        else
-          socket
-        end
-
-      [] ->
-        assign(socket, :events, [to_view(event, true)])
+  defp add_events(socket, events) do
+    case ActivityLog.placement(socket.assigns.log_window, events) do
+      :append -> ActivityLog.append(socket, events)
+      :reload -> reload_log(socket, Enum.map(events, & &1.id))
+      :ignore -> socket
     end
   end
 
-  defp after_or_equal?(event, oldest) do
-    {DateTime.to_unix(event.time), event.id} >= {DateTime.to_unix(oldest.time), oldest.id}
+  # Re-renders the loaded window, e.g. after an event was added in the middle.
+  defp reload_log(socket, fresh_ids) do
+    case ActivityLog.oldest_cursor(socket.assigns) do
+      nil ->
+        socket
+
+      cursor ->
+        events = Events.list_events(since: cursor, limit: nil)
+        ActivityLog.reset(socket, events, fresh_ids)
+    end
   end
 
-  defp merge_events(new_events, events) do
-    (new_events ++ events)
-    |> Enum.uniq_by(& &1.id)
-    |> Enum.sort_by(&{DateTime.to_unix(&1.time), &1.id})
-  end
-
-  defp tz_offset(socket) do
+  defp time_zone(socket) do
     case get_connect_params(socket) do
-      %{"tz_offset" => offset} when is_integer(offset) and abs(offset) <= @max_tz_offset -> offset
-      _ -> 0
+      %{"timezone" => zone} -> TimeZones.normalize(zone)
+      _ -> TimeZones.default()
     end
   end
 
-  defp local_today(socket) do
-    DateTime.utc_now() |> local_date(socket.assigns.tz_offset)
-  end
+  defp local_today(socket), do: TimeZones.local_today(socket.assigns.time_zone)
 
   defp blank_to_nil(value) when value in [nil, ""], do: nil
   defp blank_to_nil(value), do: value

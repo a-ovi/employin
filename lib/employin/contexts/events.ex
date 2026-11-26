@@ -11,8 +11,8 @@ defmodule Employin.Events do
 
   Writes for one user are serialized with a transaction-scoped Postgres
   advisory lock, so concurrent tabs can't break the alternation. Every
-  created event is broadcast on the `"events"` PubSub topic as
-  `{:new_event, %Event{user: %User{}}}`.
+  write is broadcast on the `"events"` PubSub topic as
+  `{:new_events, [%Event{user: %User{}}, ...]}` (oldest first), once per command.
   """
   import Ecto.Query, warn: false
 
@@ -27,8 +27,8 @@ defmodule Employin.Events do
 
   def subscribe, do: Phoenix.PubSub.subscribe(Employin.PubSub, @topic)
 
-  defp broadcast(%Event{} = event) do
-    Phoenix.PubSub.broadcast(Employin.PubSub, @topic, {:new_event, event})
+  defp broadcast(events) when is_list(events) do
+    Phoenix.PubSub.broadcast(Employin.PubSub, @topic, {:new_events, events})
   end
 
   ## Queries
@@ -36,16 +36,18 @@ defmodule Employin.Events do
   @doc """
   Lists events of all users in chronological order (oldest first), with users preloaded.
 
-  Keyset pagination: pass `before: {time, id}` of the oldest event you already
-  have to load the page before it.
+  Options:
+
+    * `:limit` – the newest `limit` matching events (default #{@default_limit}, `nil` for all)
+    * `:before` – `{time, id}` cursor: only events strictly before it (keyset pagination)
+    * `:since` – `{time, id}` cursor: only events at or after it
   """
   def list_events(opts \\ []) do
-    limit = Keyword.get(opts, :limit, @default_limit)
-
     Event
     |> before_cursor(opts[:before])
+    |> since_cursor(opts[:since])
     |> order_by([e], desc: e.time, desc: e.id)
-    |> limit(^limit)
+    |> maybe_limit(Keyword.get(opts, :limit, @default_limit))
     |> preload(:user)
     |> Repo.all()
     |> Enum.reverse()
@@ -57,6 +59,15 @@ defmodule Employin.Events do
     where(query, [e], e.time < ^time or (e.time == ^time and e.id < ^id))
   end
 
+  defp since_cursor(query, nil), do: query
+
+  defp since_cursor(query, {time, id}) do
+    where(query, [e], e.time > ^time or (e.time == ^time and e.id >= ^id))
+  end
+
+  defp maybe_limit(query, nil), do: query
+  defp maybe_limit(query, limit), do: limit(query, ^limit)
+
   @doc "The latest event of a user, or `nil`."
   def last_event(user_id) do
     Event
@@ -66,7 +77,7 @@ defmodule Employin.Events do
     |> Repo.one()
   end
 
-  @doc "`\"joined\"` if the given (latest) event means the user is working, else `\"left\"`."
+  @doc ~S|`"joined"` if the given (latest) event means the user is working, else `"left"`.|
   def current_status(nil), do: Event.left()
   def current_status(%{type: type}), do: type
 
@@ -104,7 +115,7 @@ defmodule Employin.Events do
     end)
     |> transact()
     |> case do
-      {:ok, %{event: event}} -> {:ok, publish(event)}
+      {:ok, %{event: event}} -> {:ok, event |> List.wrap() |> publish() |> hd()}
       {:error, :event, changeset, _} -> {:error, changeset}
     end
   end
@@ -125,7 +136,7 @@ defmodule Employin.Events do
     |> Multi.insert(:left, session_event(user_id, Event.left(), ending, tags))
     |> transact()
     |> case do
-      {:ok, %{joined: joined, left: left}} -> {:ok, [publish(joined), publish(left)]}
+      {:ok, %{joined: joined, left: left}} -> {:ok, publish([joined, left])}
       {:error, :slot, :overlap, _} -> {:error, :overlap}
       {:error, _step, %Ecto.Changeset{} = changeset, _} -> {:error, changeset}
     end
@@ -176,9 +187,9 @@ defmodule Employin.Events do
 
   defp transact(multi), do: Repo.transaction(multi)
 
-  defp publish(event) do
-    event = Repo.preload(event, :user)
-    broadcast(event)
-    event
+  defp publish(events) do
+    events = Repo.preload(events, :user)
+    broadcast(events)
+    events
   end
 end

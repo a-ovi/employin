@@ -2,9 +2,9 @@ defmodule EmployinWeb.HomeComponents do
   @moduledoc """
   Function components for the home page (`EmployinWeb.HomeLive`).
 
-  Events reach these components as plain maps (see `HomeLive.to_view/2`) with
-  UTC times. `tz_offset` (minutes east of UTC, from the browser) converts them
-  to the viewer's local time.
+  Events reach these components as plain maps (see `HomeLive.ActivityLog`) with
+  UTC times. `time_zone` (the viewer's IANA zone, from the browser) converts
+  them to local time.
   """
   use EmployinWeb, :html
 
@@ -38,10 +38,11 @@ defmodule EmployinWeb.HomeComponents do
 
   ## Activity log
 
-  attr :events, :list, required: true
+  attr :log, :any, required: true, doc: "the `@streams.log` stream"
+  attr :has_events?, :boolean, required: true
   attr :loader, Phoenix.LiveView.AsyncResult, required: true
   attr :more_events?, :boolean, required: true
-  attr :tz_offset, :integer, required: true
+  attr :time_zone, :string, required: true
 
   def activity_log(assigns) do
     ~H"""
@@ -68,21 +69,26 @@ defmodule EmployinWeb.HomeComponents do
             </div>
           </:failed>
 
-          <div :if={@events == []} class="flex h-full items-center justify-center p-6">
+          <div :if={!@has_events?} class="flex h-full items-center justify-center p-6">
             <p class="text-2xl font-semibold text-gray-500 sm:text-3xl">No activity yet</p>
           </div>
 
-          <div :if={@events != []} class="border-b py-4 text-center text-sm text-gray-500">
+          <div :if={@has_events?} class="border-b py-4 text-center text-sm text-gray-500">
             <span :if={@more_events?} class="flex items-center justify-center gap-2">
               <.spinner class="h-5 w-5 text-blue-500" /> Loading more...
             </span>
             <span :if={!@more_events?}>🏁 No more events</span>
           </div>
 
-          <ul :if={@events != []} id="events-list" class="w-full divide-y divide-gray-200">
-            <%= for {date, events} <- group_by_local_date(@events, @tz_offset) do %>
-              <.date_divider date={date} />
-              <.event_item :for={event <- events} event={event} tz_offset={@tz_offset} />
+          <ul id="events-list" phx-update="stream" class="w-full divide-y divide-gray-200">
+            <%= for {dom_id, item} <- @log do %>
+              <.date_divider :if={item.kind == :divider} id={dom_id} date={item.date} />
+              <.event_item
+                :if={item.kind == :event}
+                id={dom_id}
+                event={item.event}
+                time_zone={@time_zone}
+              />
             <% end %>
           </ul>
         </.async_result>
@@ -107,11 +113,12 @@ defmodule EmployinWeb.HomeComponents do
     """
   end
 
+  attr :id, :string, required: true
   attr :date, Date, required: true
 
   def date_divider(assigns) do
     ~H"""
-    <li id={"date-#{@date}"} class="sticky top-0 z-10 border-b bg-gray-100 px-3 py-2 sm:px-6">
+    <li id={@id} class="sticky top-0 z-10 border-b bg-gray-100 px-3 py-2 sm:px-6">
       <div class="flex items-center text-sm font-medium text-gray-500 before:mx-3 before:flex-1 before:border-b before:border-gray-200 after:mx-3 after:flex-1 after:border-b after:border-gray-200">
         {Calendar.strftime(@date, "%a, %b %d")}
       </div>
@@ -119,13 +126,14 @@ defmodule EmployinWeb.HomeComponents do
     """
   end
 
+  attr :id, :string, required: true
   attr :event, :map, required: true
-  attr :tz_offset, :integer, required: true
+  attr :time_zone, :string, required: true
 
   def event_item(assigns) do
     ~H"""
     <li
-      id={"event-#{@event.id}"}
+      id={@id}
       data-event
       phx-mounted={@event.fresh? && JS.transition("highlight-fade", time: 1500, blocking: false)}
       class="w-full px-3 py-3 transition-colors duration-300 hover:bg-gray-50 sm:px-6"
@@ -153,7 +161,7 @@ defmodule EmployinWeb.HomeComponents do
           datetime={DateTime.to_iso8601(@event.time)}
           class="ml-2 shrink-0 text-xs text-gray-500 sm:text-sm"
         >
-          {format_local_time(@event.time, @tz_offset)}
+          {format_local_time(@event.time, @time_zone)}
         </time>
       </div>
     </li>
@@ -289,19 +297,10 @@ defmodule EmployinWeb.HomeComponents do
 
   ## Helpers
 
-  @doc "Groups chronologically sorted events by their local calendar date."
-  def group_by_local_date(events, tz_offset) do
-    events
-    |> Enum.chunk_by(&local_date(&1.time, tz_offset))
-    |> Enum.map(fn [first | _] = chunk -> {local_date(first.time, tz_offset), chunk} end)
-  end
+  defdelegate local_date(utc_datetime, time_zone), to: Employin.TimeZones
 
-  def local_date(utc_datetime, tz_offset) do
-    utc_datetime |> DateTime.add(tz_offset, :minute) |> DateTime.to_date()
-  end
-
-  def format_local_time(utc_datetime, tz_offset) do
-    utc_datetime |> DateTime.add(tz_offset, :minute) |> Calendar.strftime("%I:%M %p")
+  def format_local_time(utc_datetime, time_zone) do
+    utc_datetime |> Employin.TimeZones.to_local(time_zone) |> Calendar.strftime("%I:%M %p")
   end
 
   defp joined?(event), do: event.type == Event.joined()

@@ -7,11 +7,13 @@ defmodule Employin.Events.Event do
 
   Besides the schema changeset, this module provides `session_form_changeset/3`.
   It backs the "add past work session" form, which collects local dates and
-  times and is converted to a UTC range with the browser's timezone offset.
+  times and is converted to a UTC range in the browser's IANA time zone.
   """
   use Employin.Schema
 
   import Ecto.Changeset
+
+  alias Employin.TimeZones
 
   @joined "joined"
   @left "left"
@@ -54,33 +56,33 @@ defmodule Employin.Events.Event do
   end
 
   @doc """
-  Changeset for the past-session form. `tz_offset` is the browser's offset
-  from UTC in minutes (e.g. `360` for UTC+6) and `now` is injectable for tests.
+  Changeset for the past-session form. `time_zone` is the viewer's IANA zone
+  (e.g. `"Asia/Dhaka"`) and `now` is injectable for tests.
   """
-  def session_form_changeset(params, tz_offset \\ 0, now \\ DateTime.utc_now()) do
+  def session_form_changeset(params, time_zone \\ "Etc/UTC", now \\ DateTime.utc_now()) do
     {%{}, @session_types}
     |> cast(params, Map.keys(@session_types))
     |> validate_required(@session_required)
     |> validate_tags()
-    |> validate_session_range(tz_offset, now)
+    |> validate_session_range(time_zone, now)
   end
 
   @doc """
   Validates the session form and returns the UTC range on success.
   """
-  def apply_session_form(params, tz_offset, now \\ DateTime.utc_now()) do
-    changeset = session_form_changeset(params, tz_offset, now)
+  def apply_session_form(params, time_zone, now \\ DateTime.utc_now()) do
+    changeset = session_form_changeset(params, time_zone, now)
 
     with {:ok, _} <- apply_action(changeset, :validate) do
-      {starting, ending} = utc_range(changeset, tz_offset)
+      {starting, ending} = utc_range(changeset, time_zone)
       {:ok, %{starting: starting, ending: ending, tags: get_field(changeset, :tags)}}
     end
   end
 
-  defp validate_session_range(%{valid?: false} = changeset, _tz_offset, _now), do: changeset
+  defp validate_session_range(%{valid?: false} = changeset, _time_zone, _now), do: changeset
 
-  defp validate_session_range(changeset, tz_offset, now) do
-    {starting, ending} = utc_range(changeset, tz_offset)
+  defp validate_session_range(changeset, time_zone, now) do
+    {starting, ending} = utc_range(changeset, time_zone)
 
     cond do
       DateTime.compare(ending, starting) != :gt ->
@@ -94,25 +96,19 @@ defmodule Employin.Events.Event do
     end
   end
 
-  defp utc_range(changeset, tz_offset) do
+  defp utc_range(changeset, time_zone) do
     {
-      local_to_utc(
+      TimeZones.local_to_utc(
         get_field(changeset, :starting_date),
         get_field(changeset, :starting_time),
-        tz_offset
+        time_zone
       ),
-      local_to_utc(
+      TimeZones.local_to_utc(
         get_field(changeset, :ending_date),
         get_field(changeset, :ending_time),
-        tz_offset
+        time_zone
       )
     }
-  end
-
-  defp local_to_utc(date, time, tz_offset) do
-    date
-    |> DateTime.new!(Time.truncate(time, :second))
-    |> DateTime.add(-tz_offset, :minute)
   end
 
   defp put_default_time(changeset) do
